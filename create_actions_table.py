@@ -3,7 +3,7 @@ from datetime import datetime
 
 def create_actions_table():
     """actions-userテーブルを作成"""
-    conn = sqlite3.connect('thoughts.db')
+    conn = sqlite3.connect('bot.db')
     cursor = conn.cursor()
     
     # actions-userテーブルを作成

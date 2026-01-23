@@ -3,7 +3,7 @@ import os
 from datetime import datetime
 
 # データベース接続
-conn = sqlite3.connect('thoughts.db')
+conn = sqlite3.connect('bot.db')
 cursor = conn.cursor()
 
 # テーブル作成
