@@ -431,8 +431,13 @@ class SearchView(ui.View):
                 from datetime import datetime, timedelta, timezone
                 if 'T' in post['created_at']:
                     dt = datetime.fromisoformat(post['created_at'].replace('Z', '+00:00'))
-                    # UTCをJSTに変換（+9時間）
-                    jst_dt = dt + timedelta(hours=9)
+                    # タイムゾーン情報がある場合はJSTに変換、ない場合はJSTとして扱う
+                    if dt.tzinfo is None:
+                        # タイムゾーン情報がない場合はJSTとして扱う
+                        jst_dt = dt.replace(tzinfo=timezone(timedelta(hours=9)))
+                    else:
+                        # UTCからJSTに変換
+                        jst_dt = dt.astimezone(timezone(timedelta(hours=9)))
                     formatted_date = jst_dt.strftime('%Y年%m月%d日 %H:%M')
                 else:
                     formatted_date = post['created_at'][:10]  # フォールバック
@@ -670,8 +675,13 @@ class PaginationView(ui.View):
                     from datetime import datetime, timedelta, timezone
                     if 'T' in post[3]:
                         dt = datetime.fromisoformat(post[3].replace('Z', '+00:00'))
-                        # UTCをJSTに変換（+9時間）
-                        jst_dt = dt + timedelta(hours=9)
+                        # タイムゾーン情報がある場合はJSTに変換、ない場合はJSTとして扱う
+                        if dt.tzinfo is None:
+                            # タイムゾーン情報がない場合はJSTとして扱う
+                            jst_dt = dt.replace(tzinfo=timezone(timedelta(hours=9)))
+                        else:
+                            # UTCからJSTに変換
+                            jst_dt = dt.astimezone(timezone(timedelta(hours=9)))
                         formatted_date = jst_dt.strftime('%Y年%m月%d日 %H:%M')
                     else:
                         formatted_date = post[3][:10]  # フォールバック
