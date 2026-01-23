@@ -15,7 +15,13 @@ class MessageRestore(commands.Cog):
     
     def __init__(self, bot):
         self.bot = bot
-        self.db_path = os.getenv('DB_PATH', 'thoughts.db')
+        # bot.pyと同じデータベースパス設定を使用
+        if os.getenv('GITHUB_ACTIONS'):
+            # GitHub Actions環境
+            self.db_path = os.path.join(os.getcwd(), 'bot.db')
+        else:
+            # ローカル環境
+            self.db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'bot.db')
     
     @app_commands.command(name="restore_messages", description="古いメッセージ参照を整理します")
     @app_commands.default_permissions(administrator=True)
