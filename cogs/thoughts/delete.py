@@ -224,6 +224,11 @@ class Delete(commands.Cog, DatabaseMixin):
                     "✅ 投稿を削除しました。",
                     ephemeral=True
                 )
+                
+                # GitHubに保存する処理
+                from .github_sync import sync_to_github
+                github_status = await sync_to_github("delete post", interaction.user.name, post_id)
+                await interaction.followup.send(f"📁 バックアップ: {github_status}", ephemeral=True)
                     
         except Exception as e:
             logger.error(f"削除処理中にエラーが発生しました: {e}", exc_info=True)

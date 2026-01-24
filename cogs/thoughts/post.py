@@ -628,6 +628,13 @@ class Post(commands.Cog, DatabaseMixin):
                         embed.add_field(name="カテゴリ", value=f"`{category}`", inline=True)
                     embed.add_field(name="表示名", value=f"`{'匿名' if is_anonymous else '表示'}`", inline=True)
                     
+                    # GitHubに保存する処理
+                    from .github_sync import sync_to_github
+                    github_status = await sync_to_github("new post", interaction.user.name, post_id)
+                    
+                    # GitHubステータスを埋め込みに追加
+                    embed.add_field(name="📁 バックアップ", value=github_status, inline=False)
+                    
                     await interaction.followup.send(embed=embed, ephemeral=True)
                 
             except Exception as e:

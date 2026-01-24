@@ -153,6 +153,11 @@ class UnlikeModal(ui.Modal, title="❤️ いいねを取り消す"):
                                 f"投稿から❤️いいねを削除しました。",
                                 ephemeral=True
                             )
+                            
+                            # GitHubに保存する処理
+                            from .github_sync import sync_to_github
+                            github_status = await sync_to_github("unlike", interaction.user.name, post_id)
+                            await interaction.followup.send(f"📁 バックアップ: {github_status}", ephemeral=True)
                         else:
                             await interaction.followup.send(
                                 f"❤️ **いいねが見つかりません**\n\n"
@@ -295,6 +300,11 @@ class DeleteReplyModal(ui.Modal, title="🗑️ リプライを削除"):
                         f"投稿へのリプライとDiscordメッセージを削除しました。",
                         ephemeral=True
                     )
+                    
+                    # GitHubに保存する処理
+                    from .github_sync import sync_to_github
+                    github_status = await sync_to_github("delete reply", interaction.user.name, post_id)
+                    await interaction.followup.send(f"📁 バックアップ: {github_status}", ephemeral=True)
                 else:
                     # リプライが複数ある場合は選択肢を表示
                     reply_list = "\n".join([

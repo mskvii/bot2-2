@@ -207,6 +207,11 @@ class ReplyEditModal(ui.Modal, title="💬 リプライを編集"):
                 ephemeral=True
             )
             
+            # GitHubに保存する処理
+            from .github_sync import sync_to_github
+            github_status = await sync_to_github("edit reply", interaction.user.name, self.reply_data[1])
+            await interaction.followup.send(f"📁 バックアップ: {github_status}", ephemeral=True)
+            
         except Exception as e:
             logger.error(f"リプライ編集中にエラーが発生しました: {e}")
             await interaction.followup.send(
