@@ -629,6 +629,10 @@ class Post(commands.Cog, DatabaseMixin):
                     embed.add_field(name="表示名", value=f"`{'匿名' if is_anonymous else '表示'}`", inline=True)
                     
                     await interaction.followup.send(embed=embed, ephemeral=True)
+                    
+                    # GitHubに保存する処理
+                    from .github_sync import sync_to_github
+                    await sync_to_github("new post", interaction.user.name, post_id)
                 
             except Exception as e:
                 logger.error(f"フォーム送信中にエラーが発生しました: {e}", exc_info=True)
