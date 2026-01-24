@@ -5,7 +5,7 @@ on:
     branches: [ main ]
   workflow_dispatch:
   schedule:
-    - cron: '*/30 * * * *'  # 30分ごとにチェック（UTC）
+    - cron: '*/5 * * * *'  # 5分ごとにチェック（UTC）- より頻繁に
 
 jobs:
   run-bot:
@@ -262,17 +262,14 @@ jobs:
         # bot.dbの変更をチェック
         DB_CHANGED=false
         if [ -f "bot.db" ]; then
-          # bot.dbに変更があるかチェック
-          if ! git diff --quiet "bot.db"; then
-            DB_CHANGED=true
-            echo "📝 bot.dbに変更があります"
-          else
-            # 強制的に変更を検知させるための処理
-            sqlite3 bot.db "CREATE TABLE IF NOT EXISTS action_sync_marker (timestamp TEXT);"
-            sqlite3 bot.db "INSERT OR REPLACE INTO action_sync_marker (timestamp) VALUES (datetime('now'));"
-            DB_CHANGED=true
-            echo "📝 bot.dbに強制変更マーカーを追加"
-          fi
+          # 常に変更があると見なして強制コミット
+          DB_CHANGED=true
+          echo "📝 bot.dbを強制的にコミットします"
+          
+          # 強制的に変更を検知させるための処理
+          sqlite3 bot.db "CREATE TABLE IF NOT EXISTS action_sync_marker (timestamp TEXT);"
+          sqlite3 bot.db "INSERT OR REPLACE INTO action_sync_marker (timestamp) VALUES (datetime('now'));"
+          echo "📝 強制変更マーカーを追加"
         fi
         
         # bot.dbが変更されている場合のみコミット
