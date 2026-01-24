@@ -164,13 +164,8 @@ jobs:
         DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
         ALLOWED_CHANNEL_IDS: ${{ secrets.ALLOWED_CHANNEL_ID }}
       run: |
-        # データベースをdataディレクトリに移動
-        if [ -f "bot.db" ]; then
-          mv bot.db data/
-        fi
-        
         # ボット起動時にデータベースパスを指定
-        export DB_PATH="data/bot.db"
+        export DB_PATH="bot.db"
         
         # 既存のプロセスを終了
         pkill -f "python.*bot.py" || true
@@ -200,7 +195,7 @@ jobs:
           if ! ps -p $(cat bot.pid) > /dev/null; then
             echo "ボットが終了しました。再起動します..."
             # 再起動
-            export DB_PATH="data/bot.db"
+            export DB_PATH="bot.db"
             nohup python bot.py > bot.log 2>&1 &
             echo $! > bot.pid
             sleep 10
@@ -216,13 +211,10 @@ jobs:
         git config --local user.name "GitHub Action"
         
         # データベースが存在し、変更がある場合のみコミット
-        if [ -f "data/bot.db" ]; then
-          # 元の場所にもコピー
-          cp data/bot.db bot.db
-          
+        if [ -f "bot.db" ]; then
           # 変更があるかチェック
-          if ! git diff --quiet data/bot.db bot.db; then
-            git add data/bot.db bot.db
+          if ! git diff --quiet bot.db; then
+            git add bot.db
             
             # コミットをリトライ
             for i in {1..3}; do
@@ -261,10 +253,10 @@ jobs:
           echo "=== 最終50行 ==="
           tail -n 50 bot.log
         fi
-        if [ -f data/bot.db ]; then
+        if [ -f bot.db ]; then
           echo "=== データベース情報 ==="
-          ls -la data/
-          sqlite3 data/bot.db "SELECT COUNT(*) FROM thoughts;" || echo "データベースが存在しません"
+          ls -la bot.db
+          sqlite3 bot.db "SELECT COUNT(*) FROM thoughts;" || echo "データベースが存在しません"
           echo "=== 最近の投稿 ==="
-          sqlite3 data/bot.db "SELECT id, is_anonymous, is_private, created_at FROM thoughts ORDER BY created_at DESC LIMIT 5;" || echo "投稿データが取得できません"
+          sqlite3 bot.db "SELECT id, is_anonymous, is_private, created_at FROM thoughts ORDER BY created_at DESC LIMIT 5;" || echo "投稿データが取得できません"
         fi
