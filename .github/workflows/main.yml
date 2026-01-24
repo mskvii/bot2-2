@@ -66,7 +66,7 @@ jobs:
             echo "✅ GitHubからbot.dbを取得しました"
           else
             echo "⚠️ GitHubにもbot.dbがありません"
-            echo "🔄 バックアップから復元を試みます..."
+            echo "� バックアップから復元を試みます..."
             if [ -d "backup" ] && [ "$(ls -1 backup/*.db 2>/dev/null | wc -l)" -gt 0 ]; then
               LATEST_BACKUP=$(ls -1t backup/*.db 2>/dev/null | head -n 1)
               cp "$LATEST_BACKUP" bot.db
