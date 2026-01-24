@@ -49,44 +49,29 @@ jobs:
         git pull origin main || true
         
         # バックアップを作成
-        if [ -f "data/bot.db" ]; then
+        if [ -f "bot.db" ]; then
           echo "既存のデータベースをバックアップします"
-          cp data/bot.db data/bot.db.backup.$(date +%Y%m%d_%H%M%S)
+          cp bot.db bot.db.backup.$(date +%Y%m%d_%H%M%S)
         fi
         
         # コンフリクト解消
-        if [ -f "bot.db" ] && [ -f "data/bot.db" ]; then
-          echo "データベースのコンフリクトを検出、マージします"
-          # より新しいファイルを使用
-          if [ "data/bot.db" -nt "bot.db" ]; then
-            echo "data/bot.db を使用します（より新しい）"
-            cp data/bot.db bot.db
-          else
-            echo "bot.db を使用します（より新しい）"
-            cp bot.db data/
-          fi
-        elif [ -f "data/bot.db" ]; then
-          echo "data/bot.db のみ存在します"
-          cp data/bot.db bot.db
-        elif [ -f "bot.db" ]; then
-          echo "bot.db のみ存在します"
-          mkdir -p data
-          cp bot.db data/
+        if [ -f "bot.db" ]; then
+          echo "✅ bot.db を使用します"
         else
-          echo "データベースが存在しません"
-          mkdir -p data
+          echo "📝 新規データベースを作成します"
+          touch bot.db
         fi
     
     - name: Check if database exists
       run: |
         # データベースの状態を確認
-        if [ -f "data/bot.db" ]; then
-          echo "既存のデータベースサイズ: $(wc -c < data/bot.db) bytes"
-          if [ -s "data/bot.db" ]; then
+        if [ -f "bot.db" ]; then
+          echo "既存のデータベースサイズ: $(wc -c < bot.db) bytes"
+          if [ -s "bot.db" ]; then
             echo "✅ 既存のデータベースを使用します（データあり）"
             
             # データベースにデータがあるか確認
-            sqlite3 data/bot.db "SELECT COUNT(*) FROM thoughts;" > /tmp/db_count.txt 2>/dev/null || echo "0" > /tmp/db_count.txt
+            sqlite3 bot.db "SELECT COUNT(*) FROM thoughts;" > /tmp/db_count.txt 2>/dev/null || echo "0" > /tmp/db_count.txt
             DB_COUNT=$(cat /tmp/db_count.txt)
             echo "📊 データベースの投稿数: $DB_COUNT"
             
@@ -95,43 +80,27 @@ jobs:
               # 既存データを保護（上書きしない）
               if [ -f "bot.db" ]; then
                 echo "⚠️ bot.db は無視します（既存データを保護）"
-                rm -f bot.db
+                # rm -f bot.db  # ← 削除：5分ごとにbot.dbを消さないようにする
               fi
             else
               echo "⚠️ データベースは空です"
-              if [ -f "bot.db" ] && [ -s "bot.db" ]; then
-                echo "🔄 bot.db にデータがあるため、そちらを使用します"
-                cp bot.db data/bot.db
-              fi
+              # 空の場合は何もしない
             fi
           else
             echo "⚠️ 既存のデータベースは空です"
-            if [ -f "bot.db" ] && [ -s "bot.db" ]; then
-              echo "🔄 bot.db にデータがあるため、そちらを使用します"
-              cp bot.db data/bot.db
-            else
-              echo "📝 新規データベースを作成します"
-              touch data/bot.db
-            fi
+            # 空の場合は何もしない
           fi
         else
           echo "📝 データベースが存在しません"
-          if [ -f "bot.db" ] && [ -s "bot.db" ]; then
-            echo "🔄 bot.db を使用します"
-            mkdir -p data
-            cp bot.db data/bot.db
-          else
-            echo "📝 新規データベースを作成します"
-            mkdir -p data
-            touch data/bot.db
-          fi
+          echo "📝 新規データベースを作成します"
+          touch bot.db
         fi
         
         # 最終的なデータベース状態を確認
-        if [ -f "data/bot.db" ]; then
-          echo "📊 最終データベースサイズ: $(wc -c < data/bot.db) bytes"
-          if [ -s "data/bot.db" ]; then
-            sqlite3 data/bot.db "SELECT COUNT(*) FROM thoughts;" > /tmp/final_count.txt 2>/dev/null || echo "0" > /tmp/final_count.txt
+        if [ -f "bot.db" ]; then
+          echo "📊 最終データベースサイズ: $(wc -c < bot.db) bytes"
+          if [ -s "bot.db" ]; then
+            sqlite3 bot.db "SELECT COUNT(*) FROM thoughts;" > /tmp/final_count.txt 2>/dev/null || echo "0" > /tmp/final_count.txt
             FINAL_COUNT=$(cat /tmp/final_count.txt)
             echo "📊 最終投稿数: $FINAL_COUNT"
           else
