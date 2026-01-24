@@ -5,7 +5,7 @@ on:
     branches: [ main ]
   workflow_dispatch:
   schedule:
-    - cron: '*/5 * * * *'  # 5分ごとにチェック（UTC）- より頻繁に
+    - cron: '*/30 * * * *'  # 30分ごとにチェック（UTC）
 
 jobs:
   run-bot:
@@ -262,14 +262,17 @@ jobs:
         # bot.dbの変更をチェック
         DB_CHANGED=false
         if [ -f "bot.db" ]; then
-          # 常に変更があると見なして強制コミット
-          DB_CHANGED=true
-          echo "📝 bot.dbを強制的にコミットします"
-          
-          # 強制的に変更を検知させるための処理
-          sqlite3 bot.db "CREATE TABLE IF NOT EXISTS action_sync_marker (timestamp TEXT);"
-          sqlite3 bot.db "INSERT OR REPLACE INTO action_sync_marker (timestamp) VALUES (datetime('now'));"
-          echo "📝 強制変更マーカーを追加"
+          # bot.dbに変更があるかチェック
+          if ! git diff --quiet "bot.db"; then
+            DB_CHANGED=true
+            echo "📝 bot.dbに変更があります"
+          else
+            # 強制的に変更を検知させるための処理
+            sqlite3 bot.db "CREATE TABLE IF NOT EXISTS action_sync_marker (timestamp TEXT);"
+            sqlite3 bot.db "INSERT OR REPLACE INTO action_sync_marker (timestamp) VALUES (datetime('now'));"
+            DB_CHANGED=true
+            echo "📝 bot.dbに強制変更マーカーを追加"
+          fi
         fi
         
         # bot.dbが変更されている場合のみコミット
@@ -277,50 +280,29 @@ jobs:
           echo "📝 bot.dbをGitHubに保存します..."
           git add bot.db
           
-          # コミットをリトライ（最大5回に増やす）
-          for i in {1..5}; do
+          # コミットをリトライ（最大3回）
+          for i in {1..3}; do
             if git commit -m "🔄 Auto-sync bot.db - $(date '+%Y-%m-%d %H:%M:%S')"; then
               echo "✅ bot.dbをコミットしました (試行 $i)"
               break
             else
-              echo "⚠️ コミット失敗、リトライします (試行 $i/5)"
+              echo "⚠️ コミット失敗、リトライします (試行 $i/3)"
               git pull --rebase origin main || true
               sleep 3
-              # 最終手段：強制コミット
-              if [ $i -eq 5 ]; then
-                echo "🔥 最終手段：強制コミットを実行します"
-                git add -A
-                git commit -m "🔥 FORCE COMMIT bot.db - $(date '+%Y-%m-%d %H:%M:%S')" || true
-              fi
             fi
           done
           
-          # プッシュをリトライ（最大5回に増やす）
-          for i in {1..5}; do
+          # プッシュをリトライ（最大3回）
+          for i in {1..3}; do
             if git push origin main; then
               echo "✅ bot.dbをプッシュしました (試行 $i)"
               break
             else
-              echo "⚠️ プッシュ失敗、リトライします (試行 $i/5)"
+              echo "⚠️ プッシュ失敗、リトライします (試行 $i/3)"
               git pull --rebase origin main || true
               sleep 3
-              # 最終手段：強制プッシュ
-              if [ $i -eq 5 ]; then
-                echo "🔥 最終手段：強制プッシュを実行します"
-                git push origin main --force || true
-              fi
             fi
           done
-          
-          # 緊急バックアップ：別ブランチに保存
-          if [ $? -ne 0 ]; then
-            echo "🚨 緊急バックアップ：別ブランチに保存します"
-            git checkout -b emergency-backup-$(date +%Y%m%d_%H%M%S)
-            git add -A
-            git commit -m "🚨 EMERGENCY BACKUP - $(date '+%Y-%m-%d %H:%M:%S')" || true
-            git push origin emergency-backup-$(date +%Y%m%d_%H%M%S) --force || true
-            git checkout main
-          fi
         else
           echo "ℹ️ bot.dbに変更はありません"
         fi
