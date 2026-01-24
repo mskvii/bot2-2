@@ -280,7 +280,7 @@ jobs:
           echo "📝 bot.dbをGitHubに保存します..."
           git add bot.db
           
-          # コミットをリトライ（最大3回）
+          # コミットをリトライ（最大3回に減らして整理）
           for i in {1..3}; do
             if git commit -m "🔄 Auto-sync bot.db - $(date '+%Y-%m-%d %H:%M:%S')"; then
               echo "✅ bot.dbをコミットしました (試行 $i)"
@@ -289,10 +289,16 @@ jobs:
               echo "⚠️ コミット失敗、リトライします (試行 $i/3)"
               git pull --rebase origin main || true
               sleep 3
+              # 最終手段：1つのクリーンなコミットにまとめる
+              if [ $i -eq 3 ]; then
+                echo "🔥 最終手段：クリーンなコミットを実行します"
+                git add -A
+                git commit -m "� Database sync - $(date '+%Y-%m-%d %H:%M:%S')" || true
+              fi
             fi
           done
           
-          # プッシュをリトライ（最大3回）
+          # プッシュをリトライ（最大3回に減らす）
           for i in {1..3}; do
             if git push origin main; then
               echo "✅ bot.dbをプッシュしました (試行 $i)"
@@ -301,8 +307,32 @@ jobs:
               echo "⚠️ プッシュ失敗、リトライします (試行 $i/3)"
               git pull --rebase origin main || true
               sleep 3
+              # 最終手段：1回のみの強制プッシュ
+              if [ $i -eq 3 ]; then
+                echo "🔥 最終手段：強制プッシュを実行します"
+                git push origin main --force || true
+              fi
             fi
           done
+          
+          # 緊急バックアップ：1日1回のみに制限
+          CURRENT_DATE=$(date +%Y%m%d)
+          LAST_BACKUP_FILE="backup/.last_emergency_backup"
+          if [ -f "$LAST_BACKUP_FILE" ]; then
+            LAST_BACKUP_DATE=$(cat "$LAST_BACKUP_FILE")
+          else
+            LAST_BACKUP_DATE="0"
+          fi
+          
+          if [ "$CURRENT_DATE" -gt "$LAST_BACKUP_DATE" ] && [ $? -ne 0 ]; then
+            echo "🚨 緊急バックアップ：別ブランチに保存します"
+            git checkout -b emergency-backup-$(date +%Y%m%d_%H%M%S)
+            git add -A
+            git commit -m "🚨 Emergency backup - $(date '+%Y-%m-%d %H:%M:%S')" || true
+            git push origin emergency-backup-$(date +%Y%m%d_%H%M%S) --force || true
+            git checkout main
+            echo "$CURRENT_DATE" > "$LAST_BACKUP_FILE"
+          fi
         else
           echo "ℹ️ bot.dbに変更はありません"
         fi
@@ -353,14 +383,14 @@ jobs:
     - name: Show logs
       if: always()
       run: |
-        if [ -f bot.log ]; then
+        if [ -f "logs/bot.log" ]; then
           echo "=== 最終ログ ==="
           echo "=== DEBUGログを含む全ログ ==="
-          grep -E "(DEBUG|ERROR|WARNING)" bot.log || echo "DEBUGログが見つかりません"
+          grep -E "(DEBUG|ERROR|WARNING)" logs/bot.log || echo "DEBUGログが見つかりません"
           echo "=== 最終50行 ==="
-          tail -n 50 bot.log
+          tail -n 50 logs/bot.log
         fi
-        if [ -f bot.db ]; then
+        if [ -f "bot.db" ]; then
           echo "=== データベース情報 ==="
           ls -la bot.db
           sqlite3 bot.db "SELECT COUNT(*) FROM thoughts;" || echo "データベースが存在しません"
@@ -368,10 +398,10 @@ jobs:
           sqlite3 bot.db "SELECT id, is_anonymous, is_private, created_at FROM thoughts ORDER BY created_at DESC LIMIT 5;" || echo "投稿データが取得できません"
         fi
         
-        if [ -d "backup" ]; then
+        if [ -d "backups" ]; then
           echo "=== バックアップ情報 ==="
           echo "📁 バックアップファイル一覧:"
-          ls -la backup/auto_backup_*.db 2>/dev/null || echo "バックアップファイルがありません"
-          BACKUP_COUNT=$(ls -1 backup/auto_backup_*.db 2>/dev/null | wc -l)
+          ls -la backups/auto_backup_*.db 2>/dev/null || ls -la backups/*.db 2>/dev/null || echo "バックアップファイルがありません"
+          BACKUP_COUNT=$(ls -1 backups/*.db 2>/dev/null | wc -l)
           echo "📊 バックアップ数: $BACKUP_COUNT（無制限）"
         fi
