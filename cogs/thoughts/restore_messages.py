@@ -1,68 +1,61 @@
-import sqlite3
 import discord
-from discord.ext import commands
 from discord import app_commands
-import logging
+from discord.ext import commands
+import sqlite3
 import os
-from dotenv import load_dotenv
-from datetime import datetime, timedelta
-from typing import Optional
+import logging
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
-class MessageRestore(commands.Cog):
-    """メッセージ復元用Cog"""
-    
+class RestoreMessages(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        # bot.pyと同じデータベースパス設定を使用
-        if os.getenv('GITHUB_ACTIONS'):
-            # GitHub Actions環境
-            self.db_path = os.path.join(os.getcwd(), 'bot.db')
-        else:
-            # ローカル環境
-            self.db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'bot.db')
-    
-    @app_commands.command(name="restore_messages", description="古いメッセージ参照を整理します")
+        self.db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'bot.db')
+
+    @app_commands.command(name="restore_messages", description="メッセージ参照を整理・復元します")
+    @app_commands.describe(message_id="確認・操作するメッセージID（省略時は全件チェック）", action="実行するアクション")
+    @app_commands.choices(action=[
+        app_commands.Choice(name="check", value="check"),
+        app_commands.Choice(name="delete", value="delete"),
+        app_commands.Choice(name="resend", value="resend")
+    ])
     @app_commands.default_permissions(administrator=True)
     @app_commands.checks.has_permissions(administrator=True)
-    @app_commands.describe(
-        message_id="対象のメッセージID（省略可）",
-        action="アクション（check/delete/resend、省略可）"
-    )
-    async def restore_messages(self, interaction: discord.Interaction, message_id: Optional[str] = None, action: Optional[str] = None):
-        """古いメッセージ参照を整理します"""
+    async def restore_messages(self, interaction: discord.Interaction, message_id: str = None, action: str = "check"):
+        """メッセージ参照を整理・復元します"""
         try:
             await interaction.response.defer(ephemeral=True)
             
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
                 
-                if message_id and action:
-                    # 特定のメッセージIDをチェック
+                if message_id:
+                    # 個別のメッセージを処理
                     cursor.execute("""
-                        SELECT mr.post_id, mr.message_id, mr.channel_id, t.content, t.category, t.is_anonymous, t.is_private, t.user_id
+                        SELECT mr.post_id, mr.message_id, mr.channel_id, t.content, t.user_id, t.is_anonymous, t.category
                         FROM message_references mr
                         JOIN thoughts t ON mr.post_id = t.id
-                        WHERE CAST(mr.message_id AS TEXT) = ?
-                    """, (str(message_id),))
+                        WHERE mr.message_id = ?
+                    """, (message_id,))
                     
-                    ref = cursor.fetchone()
+                    result = cursor.fetchone()
                     
-                    if not ref:
+                    if not result:
                         await interaction.followup.send(
                             f"❌ メッセージID {message_id} の参照が見つかりません。",
                             ephemeral=True
                         )
                         return
                     
-                    post_id, msg_id, channel_id, content, category, is_anonymous, is_private, user_id = ref
+                    post_id, msg_id, channel_id, content, user_id, is_anonymous, category = result
                     
                     if action == "check":
                         try:
                             # チャンネルを取得してメッセージが存在するか確認
                             channel = await interaction.guild.fetch_channel(int(channel_id))
-                            message = await channel.fetch_message(int(msg_id))
+                            message = await channel.fetch_message(int(message_id))
+                            
                             await interaction.followup.send(
                                 f"✅ メッセージID {message_id} は有効です。\n"
                                 f"📝 内容: {content[:50]}{'...' if len(content) > 50 else ''}\n"
@@ -293,9 +286,30 @@ class MessageRestore(commands.Cog):
             logger.info(f"データベースをバックアップしました: {backup_path}")
             
             # GitHubにバックアップファイルを保存
-            from .github_sync import sync_to_github
-            github_status = await sync_to_github(f"backup database ({timestamp})", interaction.user.name)
-            logger.info(f"バックアップのGitHub同期: {github_status}")
+            import subprocess
+            
+            try:
+                # バックアップファイルをgit add
+                subprocess.run(['git', 'add', backup_path], 
+                             capture_output=True, text=True, check=True)
+                
+                # コミットメッセージ
+                commit_message = f"💾 Manual backup - {timestamp}"
+                
+                # git commit
+                subprocess.run(['git', 'commit', '-m', commit_message], 
+                             capture_output=True, text=True, check=True)
+                
+                # git push
+                subprocess.run(['git', 'push', 'origin', 'main'], 
+                             capture_output=True, text=True, check=True)
+                
+                logger.info(f"バックアップファイルをGitHubに保存しました: {backup_path}")
+                
+            except subprocess.CalledProcessError as git_error:
+                logger.warning(f"バックアップのGitHub保存に失敗: {git_error}")
+            except Exception as git_error:
+                logger.warning(f"バックアップのGitHub保存エラー: {git_error}")
             
         except Exception as e:
             logger.error(f"バックアップ中にエラーが発生しました: {e}", exc_info=True)
@@ -408,6 +422,11 @@ class MessageRestore(commands.Cog):
             )
             
             logger.info(f"バックアップから復元しました: {backup_filename}")
+            
+            # 復元後にGitHubに同期
+            from .github_sync import sync_to_github
+            github_status = await sync_to_github("restore backup", interaction.user.name)
+            logger.info(f"復元後のGitHub同期: {github_status}")
             
         except Exception as e:
             logger.error(f"バックアップ復元中にエラーが発生しました: {e}", exc_info=True)
@@ -525,73 +544,31 @@ class MessageRestore(commands.Cog):
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
                 
-                # 孤立したメッセージ参照を検出
+                # 孤立したメッセージ参照を削除
                 cursor.execute("""
-                    SELECT mr.post_id, mr.message_id, mr.channel_id
-                    FROM message_references mr
-                    LEFT JOIN thoughts t ON mr.post_id = t.id
-                    WHERE t.id IS NULL
+                    DELETE FROM message_references 
+                    WHERE post_id NOT IN (SELECT id FROM thoughts)
                 """)
-                orphaned_refs = cursor.fetchall()
+                deleted_refs = cursor.rowcount
                 
-                # 参照されていない投稿を検出
+                # 孤立したデータがないかチェック
                 cursor.execute("""
-                    SELECT t.id, t.content, t.created_at
-                    FROM thoughts t
+                    SELECT COUNT(*) FROM thoughts t
                     LEFT JOIN message_references mr ON t.id = mr.post_id
                     WHERE mr.post_id IS NULL
                 """)
-                orphaned_posts = cursor.fetchall()
+                unreferenced_posts = cursor.fetchone()[0]
                 
-                cleanup_count = 0
+                conn.commit()
                 
-                # 孤立したメッセージ参照を削除
-                if orphaned_refs:
-                    orphaned_post_ids = [ref[0] for ref in orphaned_refs]
-                    placeholders = ','.join(['?'] * len(orphaned_post_ids))
-                    cursor.execute(f"""
-                        DELETE FROM message_references 
-                        WHERE post_id IN ({placeholders})
-                    """, orphaned_post_ids)
-                    cleanup_count += len(orphaned_refs)
-                    
-                    await interaction.followup.send(
-                        f"🗑️ {len(orphaned_refs)}件の孤立したメッセージ参照を削除しました。\n"
-                        f"📊 削除された参照: {', '.join([str(ref[0]) for ref in orphaned_refs[:5]])}{'...' if len(orphaned_refs) > 5 else ''}",
-                        ephemeral=True
-                    )
+                await interaction.followup.send(
+                    f"✅ クリーンアップ完了\n"
+                    f"🗑️ 削除された孤立参照: {deleted_refs}件\n"
+                    f"📝 参照されていない投稿: {unreferenced_posts}件",
+                    ephemeral=True
+                )
                 
-                # 参照されていない投稿を削除
-                if orphaned_posts:
-                    orphaned_post_ids = [post[0] for post in orphaned_posts]
-                    placeholders = ','.join(['?'] * len(orphaned_post_ids))
-                    cursor.execute(f"""
-                        DELETE FROM thoughts 
-                        WHERE id IN ({placeholders})
-                    """, orphaned_post_ids)
-                    cleanup_count += len(orphaned_posts)
-                    
-                    await interaction.followup.send(
-                        f"🗑️ {len(orphaned_posts)}件の参照されていない投稿を削除しました。\n"
-                        f"📝 削除された投稿ID: {', '.join([str(post[0]) for post in orphaned_posts[:5]])}{'...' if len(orphaned_posts) > 5 else ''}",
-                        ephemeral=True
-                    )
-                
-                if not orphaned_refs and not orphaned_posts:
-                    await interaction.followup.send(
-                        "✅ 孤立したデータはありません。データベースはクリーンです。",
-                        ephemeral=True
-                    )
-                
-                if cleanup_count > 0:
-                    conn.commit()
-                    await interaction.followup.send(
-                        f"✅ クリーンアップが完了しました。\n"
-                        f"🧹 合計 {cleanup_count}件の不要なデータを削除しました。",
-                        ephemeral=True
-                    )
-                    
-                    logger.info(f"クリーンアップ完了: {cleanup_count}件の不要なデータを削除")
+                logger.info(f"孤立した参照をクリーンアップ: {deleted_refs}件削除")
                 
         except Exception as e:
             logger.error(f"クリーンアップ中にエラーが発生しました: {e}", exc_info=True)
@@ -601,4 +578,4 @@ class MessageRestore(commands.Cog):
             )
 
 async def setup(bot):
-    await bot.add_cog(MessageRestore(bot))
+    await bot.add_cog(RestoreMessages(bot))
