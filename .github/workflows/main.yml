@@ -200,19 +200,20 @@ jobs:
         pkill -f "python.*bot.py" || true
         
         # ボットを起動
-        nohup python bot.py > bot.log 2>&1 &
-        echo $! > bot.pid
+        mkdir -p logs temp
+        nohup python bot.py > logs/bot.log 2>&1 &
+        echo $! > temp/bot.pid
         
         # 起動を待つ
         sleep 10
         
         # ログを表示
-        cat bot.log
+        cat logs/bot.log
         
         # プロセスが実行中か確認
-        if ! ps -p $(cat bot.pid) > /dev/null; then
+        if ! ps -p $(cat temp/bot.pid) > /dev/null; then
           echo "ボットの起動に失敗しました"
-          cat bot.log
+          cat logs/bot.log
           exit 1
         fi
         
@@ -221,12 +222,12 @@ jobs:
         # 無限ループで待機
         while true; do
           # ボットがまだ実行中か確認
-          if ! ps -p $(cat bot.pid) > /dev/null; then
+          if ! ps -p $(cat temp/bot.pid) > /dev/null; then
             echo "ボットが終了しました。再起動します..."
             # 再起動
             export DB_PATH="bot.db"
-            nohup python bot.py > bot.log 2>&1 &
-            echo $! > bot.pid
+            nohup python bot.py > logs/bot.log 2>&1 &
+            echo $! > temp/bot.pid
             sleep 10
           fi
           # 1分ごとにチェック
