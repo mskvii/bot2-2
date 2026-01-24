@@ -24,6 +24,21 @@ async def sync_to_github(action_description: str, user_name: str = None, post_id
         # bot.dbのパスを取得
         bot_db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'bot.db')
         
+        # 強制的に変更を検知させるための処理
+        import sqlite3
+        conn = sqlite3.connect(bot_db_path)
+        cursor = conn.cursor()
+        
+        # git_sync_markerテーブルを作成してダミーデータを挿入
+        cursor.execute('CREATE TABLE IF NOT EXISTS git_sync_marker (timestamp TEXT)')
+        cursor.execute('INSERT OR REPLACE INTO git_sync_marker (timestamp) VALUES (?)', 
+                      (datetime.now().isoformat(),))
+        conn.commit()
+        conn.close()
+        
+        # ファイルのタイムスタンプを更新
+        os.utime(bot_db_path)
+        
         # コミットメッセージを作成
         if post_id and user_name:
             commit_message = f"🔄 {action_description.capitalize()} post #{post_id} by {user_name} - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
@@ -37,23 +52,41 @@ async def sync_to_github(action_description: str, user_name: str = None, post_id
                      capture_output=True, text=True, check=True)
         
         # 必ずコミット（変更チェックなし）
-        try:
-            # git commit
-            subprocess.run(['git', 'commit', '-m', commit_message], 
-                         capture_output=True, text=True, check=True)
-            
-            # git push
-            subprocess.run(['git', 'push', 'origin', 'main'], 
-                         capture_output=True, text=True, check=True)
-            
-            success_msg = f"✅ GitHubに保存しました: {action_description}"
-            logger.info(success_msg)
-            return success_msg
-            
-        except subprocess.CalledProcessError as git_error:
-            error_msg = f"⚠️ GitHub保存に失敗: {git_error.stderr.strip()}"
-            logger.warning(f"GitHub保存失敗: {git_error}")
-            return error_msg
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                # git commit
+                subprocess.run(['git', 'commit', '-m', commit_message], 
+                             capture_output=True, text=True, check=True)
+                
+                # git push（リトライ付き）
+                for push_attempt in range(max_retries):
+                    try:
+                        subprocess.run(['git', 'push', 'origin', 'main'], 
+                                     capture_output=True, text=True, check=True)
+                        
+                        success_msg = f"✅ GitHubに保存しました: {action_description}"
+                        logger.info(success_msg)
+                        return success_msg
+                        
+                    except subprocess.CalledProcessError as push_error:
+                        if push_attempt < max_retries - 1:
+                            logger.warning(f"Git push失敗、リトライします (試行 {push_attempt + 1}/{max_retries}): {push_error.stderr.strip()}")
+                            # リモートの変更を取得してリベース
+                            subprocess.run(['git', 'pull', '--rebase', 'origin', 'main'], 
+                                         capture_output=True, text=True, check=False)
+                            import time
+                            time.sleep(2)
+                        else:
+                            raise push_error
+                
+            except subprocess.CalledProcessError as commit_error:
+                if attempt < max_retries - 1:
+                    logger.warning(f"Git commit失敗、リトライします (試行 {attempt + 1}/{max_retries}): {commit_error.stderr.strip()}")
+                    import time
+                    time.sleep(2)
+                else:
+                    raise commit_error
         
     except subprocess.CalledProcessError as git_error:
         error_msg = f"⚠️ GitHub保存に失敗: {git_error.stderr.strip()}"
