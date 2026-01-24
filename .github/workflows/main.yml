@@ -5,7 +5,7 @@ on:
     branches: [ main ]
   workflow_dispatch:
   schedule:
-    - cron: '*/5 * * * *'  # 5分ごとにチェック（UTC）
+    - cron: '*/30 * * * *'  # 30分ごとにチェック（UTC）
 
 jobs:
   run-bot:
@@ -73,8 +73,12 @@ jobs:
               echo "✅ バックアップから復元しました: $LATEST_BACKUP"
             else
               echo "❌ バックアップもありません"
-              echo "� 最終手段として空のデータベースを作成します"
-              touch bot.db
+              if [ ! -f "bot.db" ]; then
+                echo "📝 新規に空のデータベースを作成します（既存ファイルはありません）"
+                touch bot.db
+              else
+                echo "✅ 既存のbot.dbを保護します（上書しません）"
+              fi
             fi
           fi
         fi
@@ -141,8 +145,12 @@ jobs:
               echo "✅ バックアップから復元しました: $LATEST_BACKUP"
             else
               echo "❌ バックアップもありません"
-              echo "📝 最終手段として空のデータベースを作成します"
-              touch bot.db
+              if [ ! -f "bot.db" ]; then
+                echo "📝 新規に空のデータベースを作成します（既存ファイルはありません）"
+                touch bot.db
+              else
+                echo "✅ 既存のbot.dbを保護します（上書しません）"
+              fi
             fi
           fi
         fi
@@ -249,48 +257,47 @@ jobs:
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
         
-        # バックアップファイルのみコミット（bot.dbは自動コミットしない）
+        # バックアップファイルの変更をチェック
+        BACKUP_CHANGED=false
         if [ -d "backup" ]; then
-          # バックアップファイルの変更があるかチェック
-          BACKUP_CHANGED=false
           for backup_file in backup/auto_backup_*.db; do
             if [ -f "$backup_file" ] && ! git diff --quiet "$backup_file"; then
               BACKUP_CHANGED=true
               break
             fi
           done
+        fi
+        
+        # バックアップファイルが変更されている場合のみコミット
+        if [ "$BACKUP_CHANGED" = true ]; then
+          echo "📝 バックアップファイルをGitHubに保存します..."
+          git add backup/auto_backup_*.db
           
-          if [ "$BACKUP_CHANGED" = true ]; then
-            git add backup/auto_backup_*.db
-            
-            # コミットをリトライ
-            for i in {1..3}; do
-              if git commit -m "� Update backup files - $(date '+%Y-%m-%d %H:%M:%S')"; then
-                echo "✅ バックアップファイルをコミットしました (試行 $i)"
-                break
-              else
-                echo "⚠️ コミット失敗、リトライします (試行 $i/3)"
-                git pull --rebase origin main || true
-                sleep 5
-              fi
-            done
-            
-            # プッシュをリトライ
-            for i in {1..3}; do
-              if git push origin main; then
-                echo "✅ バックアップファイルをプッシュしました (試行 $i)"
-                break
-              else
-                echo "⚠️ プッシュ失敗、リトライします (試行 $i/3)"
-                git pull --rebase origin main || true
-                sleep 5
-              fi
-            done
-          else
-            echo "ℹ️ バックアップファイルの変更はありません"
-          fi
+          # コミットをリトライ
+          for i in {1..3}; do
+            if git commit -m "📁 Update backup files - $(date '+%Y-%m-%d %H:%M:%S')"; then
+              echo "✅ バックアップファイルをコミットしました (試行 $i)"
+              break
+            else
+              echo "⚠️ コミット失敗、リトライします (試行 $i/3)"
+              git pull --rebase origin main || true
+              sleep 5
+            fi
+          done
+          
+          # プッシュをリトライ
+          for i in {1..3}; do
+            if git push origin main; then
+              echo "✅ バックアップファイルをプッシュしました (試行 $i)"
+              break
+            else
+              echo "⚠️ プッシュ失敗、リトライします (試行 $i/3)"
+              git pull --rebase origin main || true
+              sleep 5
+            fi
+          done
         else
-          echo "ℹ️ バックアップディレクトリが存在しません"
+          echo "ℹ️ バックアップファイルに変更はありません"
         fi
     
     - name: Show logs
