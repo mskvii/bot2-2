@@ -292,6 +292,11 @@ class MessageRestore(commands.Cog):
             
             logger.info(f"データベースをバックアップしました: {backup_path}")
             
+            # GitHubにバックアップファイルを保存
+            from .github_sync import sync_to_github
+            github_status = await sync_to_github(f"backup database ({timestamp})", interaction.user.name)
+            logger.info(f"バックアップのGitHub同期: {github_status}")
+            
         except Exception as e:
             logger.error(f"バックアップ中にエラーが発生しました: {e}", exc_info=True)
             await interaction.followup.send(
