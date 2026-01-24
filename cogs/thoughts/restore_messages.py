@@ -7,108 +7,8 @@ import os
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
 from typing import Optional
-import discord.ui as ui
 
 logger = logging.getLogger(__name__)
-
-class BackupRestoreView(ui.View):
-    """バックアップ復元選択用View"""
-    
-    def __init__(self, cog, backup_path: str):
-        super().__init__(timeout=60)  # 60秒でタイムアウト
-        self.cog = cog
-        self.backup_path = backup_path
-    
-    @ui.button(label="🔄 このバックアップで復元", style=discord.ButtonStyle.primary, custom_id="restore_from_backup")
-    async def restore_button(self, interaction: discord.Interaction, button: ui.Button):
-        """バックアップから復元するボタン"""
-        try:
-            await interaction.response.defer(ephemeral=True)
-            
-            # 現在のデータベースをバックアップ
-            current_backup = f"backup/current_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.db"
-            os.makedirs("backup", exist_ok=True)
-            
-            with sqlite3.connect(self.cog.db_path) as source:
-                with sqlite3.connect(current_backup) as backup:
-                    source.backup(backup)
-            
-            # バックアップから復元
-            with sqlite3.connect(self.backup_path) as backup:
-                with sqlite3.connect(self.cog.db_path) as target:
-                    backup.backup(target)
-            
-            # GitHubに保存する処理
-            github_status = ""
-            try:
-                import subprocess
-                
-                # git add
-                subprocess.run(['git', 'add', 'bot.db'], 
-                             capture_output=True, text=True, check=True)
-                subprocess.run(['git', 'add', current_backup], 
-                             capture_output=True, text=True, check=True)
-                
-                # git commit
-                commit_message = f"🔄 Restore from backup - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-                subprocess.run(['git', 'commit', '-m', commit_message], 
-                             capture_output=True, text=True, check=True)
-                
-                # git push
-                subprocess.run(['git', 'push', 'origin', 'main'], 
-                             capture_output=True, text=True, check=True)
-                
-                github_status = "✅ GitHubにも保存しました"
-                
-            except subprocess.CalledProcessError as git_error:
-                github_status = f"⚠️ GitHub保存に失敗: {git_error.stderr.strip()}"
-            except Exception as git_error:
-                github_status = f"⚠️ GitHub保存エラー: {str(git_error)}"
-            
-            await interaction.followup.send(
-                f"✅ バックアップから復元しました。\n"
-                f"📁 復元元: {os.path.basename(self.backup_path)}\n"
-                f"💾 現在のバックアップ: {os.path.basename(current_backup)}\n"
-                f"{github_status}",
-                ephemeral=True
-            )
-            
-            # ボタンを無効化
-            button.disabled = True
-            try:
-                await interaction.message.edit(view=self)
-            except discord.NotFound:
-                # メッセージが見つからない場合は無視
-                pass
-            except Exception as e:
-                logger.warning(f"ボタン無効化エラー: {e}")
-            
-        except Exception as e:
-            await interaction.followup.send(
-                f"❌ 復元に失敗しました: {e}",
-                ephemeral=True
-            )
-    
-    @ui.button(label="❌ キャンセル", style=discord.ButtonStyle.secondary, custom_id="cancel_restore")
-    async def cancel_button(self, interaction: discord.Interaction, button: ui.Button):
-        """キャンセルボタン"""
-        try:
-            await interaction.response.edit_message(
-                content="バックアップ作成完了。復元はキャンセルされました。",
-                view=None
-            )
-        except discord.NotFound:
-            # メッセージが見つからない場合はfollowupで送信
-            await interaction.followup.send(
-                "バックアップ作成完了。復元はキャンセルされました。",
-                ephemeral=True
-            )
-        except Exception as e:
-            logger.warning(f"キャンセルメッセージ編集エラー: {e}")
-            await interaction.followup.send(
-                "バックアップ作成完了。復元はキャンセルされました。",
-                ephemeral=True
-            )
 
 class MessageRestore(commands.Cog):
     """メッセージ復元用Cog"""
@@ -382,45 +282,11 @@ class MessageRestore(commands.Cog):
                 'readable_time': datetime.now().strftime("%Y年%m月%d日 %H:%M:%S")
             }
             
-            # GitHubに保存する処理
-            github_status = ""
-            try:
-                import subprocess
-                
-                # git add
-                result = subprocess.run(['git', 'add', backup_path], 
-                                      capture_output=True, text=True, check=True)
-                
-                # git commit
-                commit_message = f"💾 Manual backup - {timestamp}"
-                result = subprocess.run(['git', 'commit', '-m', commit_message], 
-                                      capture_output=True, text=True, check=True)
-                
-                # git push
-                result = subprocess.run(['git', 'push', 'origin', 'main'], 
-                                      capture_output=True, text=True, check=True)
-                
-                github_status = "✅ GitHubにも保存しました"
-                logger.info(f"手動バックアップをGitHubに保存しました: {backup_path}")
-                
-            except subprocess.CalledProcessError as git_error:
-                github_status = f"⚠️ GitHub保存に失敗: {git_error.stderr.strip()}"
-                logger.warning(f"GitHub保存失敗: {git_error}")
-            except Exception as git_error:
-                github_status = f"⚠️ GitHub保存エラー: {str(git_error)}"
-                logger.warning(f"GitHub保存エラー: {git_error}")
-            
-            # 復元選択肢を表示
-            view = BackupRestoreView(self, backup_path)
-            
             await interaction.followup.send(
                 f"✅ データベースをバックアップしました。\n"
                 f"📁 バックアップファイル: {backup_path}\n"
                 f"📊 サイズ: {backup_info['size']} bytes\n"
-                f"🕐 作成時刻: {backup_info['readable_time']}\n"
-                f"{github_status}\n\n"
-                f"🔄 このバックアップで復元しますか？",
-                view=view,
+                f"🕐 作成時刻: {backup_info['readable_time']}",
                 ephemeral=True
             )
             
