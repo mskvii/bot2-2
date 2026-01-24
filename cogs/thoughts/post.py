@@ -254,6 +254,10 @@ class Post(commands.Cog, DatabaseMixin):
                 
                 await interaction.followup.send(embed=embed, ephemeral=True)
                 
+                # GitHubに保存する処理
+                from .github_sync import sync_to_github
+                await sync_to_github("new post", interaction.user.name, post_id)
+                
             except Exception as e:
                 logger.error(f"投稿中にエラーが発生しました: {e}", exc_info=True)
                 error_message = f"❌ 投稿中にエラーが発生しました。\n詳細: {str(e)}"
@@ -632,8 +636,7 @@ class Post(commands.Cog, DatabaseMixin):
                     
                     # GitHubに保存する処理
                     from .github_sync import sync_to_github
-                    github_result = await sync_to_github("new post", interaction.user.name, post_id)
-                    logger.info(f"GitHub同期結果: {github_result}")
+                    await sync_to_github("new post", interaction.user.name, post_id)
                 
             except Exception as e:
                 logger.error(f"フォーム送信中にエラーが発生しました: {e}", exc_info=True)
