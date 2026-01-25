@@ -112,7 +112,7 @@ temp/
 cache/
 logs/
 backups/
-bot.db
+bot.db.*
 *.db.*
 bot.log
 bot.pid
