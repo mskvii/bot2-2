@@ -5,8 +5,8 @@ on:
     branches: [ main ]
   workflow_dispatch:
   schedule:
-    # - cron: '*/30 * * * *'  # 30分ごとに実行（UTC）- 一時停止
-    # - cron: '0,30 * * * *'  # 毎時0分と30分に実行（確実）- 一時停止
+    - cron: '*/30 * * * *'  # 30分ごとに実行（UTC）
+    - cron: '0,30 * * * *'  # 毎時0分と30分に実行（確実）
 
 jobs:
   run-bot:
@@ -258,11 +258,11 @@ jobs:
             DB_CHANGED=true
             echo "📝 bot.dbに変更があります"
           else
-            # 強制的に変更を検知させるための処理
-            sqlite3 bot.db "CREATE TABLE IF NOT EXISTS action_sync_marker (timestamp TEXT);"
-            sqlite3 bot.db "INSERT OR REPLACE INTO action_sync_marker (timestamp) VALUES (datetime('now'));"
+            # 強制的に変更を検知させるための処理（シーケンスに影響しない方法）
+            # ファイルのタイムスタンプを更新するだけで、データベースには触らない
+            touch bot.db
             DB_CHANGED=true
-            echo "📝 bot.dbに強制変更マーカーを追加"
+            echo "📝 bot.dbのタイムスタンプを更新して変更を検知"
           fi
         fi
         
