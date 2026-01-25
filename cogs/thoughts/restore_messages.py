@@ -257,10 +257,10 @@ class RestoreMessages(commands.Cog):
             
             # バックアップファイル名を作成
             timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-            backup_path = f"backup/thoughts_backup_{timestamp}.db"
+            backup_path = f"backups/thoughts_backup_{timestamp}.db"
             
             # バックアップディレクトリを作成
-            os.makedirs("backup", exist_ok=True)
+            os.makedirs("backups", exist_ok=True)
             
             # データベースをコピー
             with sqlite3.connect(self.db_path) as source:
@@ -326,7 +326,7 @@ class RestoreMessages(commands.Cog):
         try:
             await interaction.response.defer(ephemeral=True)
             
-            if not os.path.exists("backup"):
+            if not os.path.exists("backups"):
                 await interaction.followup.send(
                     "📁 バックアップはありません。",
                     ephemeral=True
@@ -335,9 +335,9 @@ class RestoreMessages(commands.Cog):
             
             # バックアップファイル一覧を取得
             backup_files = []
-            for filename in os.listdir("backup"):
+            for filename in os.listdir("backups"):
                 if filename.startswith("thoughts_backup_") and filename.endswith(".db"):
-                    filepath = os.path.join("backup", filename)
+                    filepath = os.path.join("backups", filename)
                     stat = os.stat(filepath)
                     backup_files.append({
                         'filename': filename,
@@ -392,7 +392,7 @@ class RestoreMessages(commands.Cog):
         try:
             await interaction.response.defer(ephemeral=True)
             
-            backup_path = os.path.join("backup", backup_filename)
+            backup_path = os.path.join("backups", backup_filename)
             
             if not os.path.exists(backup_path):
                 await interaction.followup.send(
@@ -402,8 +402,8 @@ class RestoreMessages(commands.Cog):
                 return
             
             # 現在のデータベースをバックアップ
-            current_backup = f"backup/current_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.db"
-            os.makedirs("backup", exist_ok=True)
+            current_backup = f"backups/current_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.db"
+            os.makedirs("backups", exist_ok=True)
             
             with sqlite3.connect(self.db_path) as source:
                 with sqlite3.connect(current_backup) as backup:
