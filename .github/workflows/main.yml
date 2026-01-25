@@ -90,25 +90,35 @@ jobs:
                 # rm -f bot.db  # ← 削除：5分ごとにbot.dbを消さないようにする
               fi
             else
-              echo "⚠️ データベースは空です"
-              # バックアップから自動復元を試みる
-              echo "🔄 バックアップからの自動復元を試みます..."
-              if [ -d "backup" ] && [ "$(ls -1 backup/*.db 2>/dev/null | wc -l)" -gt 0 ]; then
-                LATEST_BACKUP=$(ls -1t backup/*.db 2>/dev/null | head -n 1)
-                echo "📁 最新のバックアップ: $LATEST_BACKUP"
-                cp "$LATEST_BACKUP" bot.db
-                echo "✅ バックアップから復元しました"
-                
-                # 復元後の確認
-                RESTORED_COUNT=$(sqlite3 bot.db "SELECT COUNT(*) FROM thoughts;" 2>/dev/null || echo "0")
-                echo "📊 復元後の投稿数: $RESTORED_COUNT"
-                if [ "$RESTORED_COUNT" -gt 0 ]; then
-                  echo "✅ データ復元に成功しました"
-                else
-                  echo "⚠️ バックアップも空でした"
-                fi
+              echo "⚠️ データベースが存在しません"
+              echo "🔄 GitHubから取得を試みます..."
+              git fetch origin main
+              git checkout origin/main -- bot.db 2>/dev/null || echo "⚠️ GitHubからの取得に失敗しました"
+              
+              if [ -f "bot.db" ] && [ -s "bot.db" ]; then
+                echo "✅ GitHubからデータベースを取得しました"
               else
-                echo "⚠️ 利用可能なバックアップがありません"
+                echo "⚠️ GitHubにも有効なデータベースがありません"
+                echo "🔄 バックアップから復元を試みます..."
+                if [ -d "backup" ] && [ "$(ls -1 backup/*.db 2>/dev/null | wc -l)" -gt 0 ]; then
+                  LATEST_BACKUP=$(ls -1t backup/*.db 2>/dev/null | head -n 1)
+                  echo "📁 最新のバックアップ: $LATEST_BACKUP"
+                  cp "$LATEST_BACKUP" bot.db
+                  echo "✅ バックアップから復元しました"
+                  
+                  # 復元後の確認
+                  RESTORED_COUNT=$(sqlite3 bot.db "SELECT COUNT(*) FROM thoughts;" 2>/dev/null || echo "0")
+                  echo "📊 復元後の投稿数: $RESTORED_COUNT"
+                  if [ "$RESTORED_COUNT" -gt 0 ]; then
+                    echo "✅ データ復元に成功しました"
+                  else
+                    echo "⚠️ バックアップも空でした"
+                  fi
+                else
+                  echo "⚠️ 利用可能なバックアップがありません"
+                  echo "📝 新規に空のデータベースを作成します"
+                  touch bot.db
+                fi
               fi
             fi
           else
