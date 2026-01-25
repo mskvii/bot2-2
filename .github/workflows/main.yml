@@ -5,7 +5,7 @@ on:
     branches: [ main ]
   workflow_dispatch:
   schedule:
-    - cron: '0 */6 * * *'  # 6時間ごとにチェック（UTC）
+    - cron: '*/30 * * * *'  # 30分ごとにチェック（UTC）
 
 jobs:
   run-bot:
@@ -219,8 +219,8 @@ jobs:
         
         echo "ボットが正常に起動しました"
         
-        # 無限ループで待機
-        while true; do
+        # 30分間実行して終了（30分後のワークフローが引き継ぐ）
+        for i in {1..30}; do
           # ボットがまだ実行中か確認
           if ! ps -p $(cat temp/bot.pid) > /dev/null; then
             echo "ボットが終了しました。再起動します..."
@@ -232,7 +232,11 @@ jobs:
           fi
           # 1分ごとにチェック
           sleep 60
+          echo "実行中... ($i/30分)"
         done
+        
+        echo "30分経過したため、ボットを停止して次のワークフローに引き継ぎます"
+        pkill -f "python.*bot.py" || true
     
     - name: Create automatic backup
       run: |
