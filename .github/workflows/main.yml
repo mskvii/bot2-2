@@ -16,9 +16,6 @@ jobs:
       group: bot-${{ github.ref }}
       cancel-in-progress: false
     
-    # タイムアウトを設定して無限実行を防ぐ
-    timeout-minutes: 60
-    
     steps:
     - uses: actions/checkout@v3
       with:
