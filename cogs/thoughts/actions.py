@@ -278,7 +278,6 @@ class ReplyModal(ui.Modal, title="💬 リプライする投稿"):
                     description=reply_content,
                     color=discord.Color.green()
                 )
-                reply_embed.add_field(name="リプライした人", value=interaction.user.display_name, inline=True)
                 reply_embed.set_footer(text=f"リプライID: {reply_id}")
                 
                 await replies_channel.send(embed=reply_embed)
