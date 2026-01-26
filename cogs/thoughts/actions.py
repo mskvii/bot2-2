@@ -68,8 +68,8 @@ class LikeModal(ui.Modal, title="❤️ いいねする投稿"):
             if likes_channel:
                 # いいねしたことを投稿
                 like_embed = discord.Embed(
-                    title=f"❤️ {interaction.user.display_name}がいいねしました",
-                    description=f"**投稿ID: {post_id}**\n\n{post_content[:200]}{'...' if len(post_content) > 200 else ''}",
+                    title=f"❤️ いいね：{interaction.user.display_name}",
+                    description=f"**投稿ID: {post_id}**\n\n{post_content}",
                     color=discord.Color.red()
                 )
                 like_embed.add_field(name="投稿者", value=post.get('display_name', '名無し'), inline=True)
@@ -77,72 +77,12 @@ class LikeModal(ui.Modal, title="❤️ いいねする投稿"):
                 
                 await likes_channel.send(embed=like_embed)
             
-            # 元の投稿メッセージを取得
-            message_ref_file = os.path.join("data", f"message_ref_{post_id}.json")
-            message_ref = None
-            
-            if os.path.exists(message_ref_file):
-                try:
-                    import json
-                    with open(message_ref_file, 'r', encoding='utf-8') as f:
-                        message_ref_data = json.load(f)
-                        message_ref = (message_ref_data.get('message_id'), message_ref_data.get('channel_id'))
-                except (json.JSONDecodeError, FileNotFoundError):
-                    message_ref = None
-            
-            if message_ref:
-                try:
-                    # メッセージを取得してリアクションを追加
-                    channel = interaction.guild.get_channel(int(message_ref[1]))
-                    if channel:
-                        message = await channel.fetch_message(int(message_ref[0]))
-                        
-                        # いいね処理
-                        try:
-                            # 新しいいいねメッセージを送信
-                            like_message = f"❤️いいね：{interaction.user.display_name}"
-                            await message.reply(like_message)
-                            
-                            await interaction.followup.send(
-                                f"❤️ **いいねしました！**\n\n"
-                                f"投稿にいいねしました！",
-                                ephemeral=True
-                            )
-                        except discord.Forbidden:
-                            await interaction.followup.send(
-                                f"❤️ **いいねしました！**\n\n"
-                                f"投稿にいいねしました！\n"
-                                f"※権限がないため、メッセージを送信できませんでした。",
-                                ephemeral=True
-                            )
-                        except Exception as e:
-                            logger.error(f"いいねメッセージ送信中にエラー: {e}")
-                            await interaction.followup.send(
-                                f"❤️ **いいねしました！**\n\n"
-                                f"投稿にいいねしました！",
-                                ephemeral=True
-                            )
-                    else:
-                        await interaction.followup.send(
-                            f"**いいねしました！**\n\n"
-                            f"投稿にいいねしました。\n"
-                            f"※チャンネルが見つからないため、リアクションを追加できませんでした",
-                            ephemeral=True
-                        )
-                except:
-                    await interaction.followup.send(
-                        f"**いいねしました！**\n\n"
-                        f"投稿にいいねしました。\n"
-                        f"※メッセージが見つからないため、リアクションを追加できませんでした",
-                        ephemeral=True
-                    )
-            else:
-                # メッセージ参照がない場合は個人メッセージのみ
-                await interaction.followup.send(
-                    f"❤️ **いいねしました！**\n\n"
-                    f"投稿にいいねしました。",
-                    ephemeral=True
-                )
+            # 専用チャンネルへの転送のみで完了
+            await interaction.followup.send(
+                f"❤️ **いいねしました！**\n\n"
+                f"いいねチャンネルに投稿を転送しました。",
+                ephemeral=True
+            )
             
             # GitHubに保存する処理
             from .github_sync import sync_to_github
@@ -259,69 +199,12 @@ class ReplyModal(ui.Modal, title="💬 リプライする投稿"):
                 
                 await replies_channel.send(embed=reply_embed)
             
-            logger.info(f"リプライチャンネル検索結果: {replies_channel}")
-            logger.info(f"サーバーのチャンネル一覧: {[ch.name for ch in interaction.guild.text_channels]}")
-            
-            if replies_channel:
-                logger.info(f"リプライチャンネルが見つかりました: {replies_channel.id}")
-                # 元の投稿メッセージを取得
-                message_ref_file = os.path.join("data", f"message_ref_{post_id}.json")
-                message_ref = None
-                
-                if os.path.exists(message_ref_file):
-                    try:
-                        import json
-                        with open(message_ref_file, 'r', encoding='utf-8') as f:
-                            message_ref_data = json.load(f)
-                            message_ref = (message_ref_data.get('message_id'), message_ref_data.get('channel_id'))
-                    except (json.JSONDecodeError, FileNotFoundError):
-                        message_ref = None
-                
-                if message_ref:
-                    try:
-                        # メッセージを取得してリプライ
-                        channel = interaction.guild.get_channel(int(message_ref[1]))
-                        if channel:
-                            message = await channel.fetch_message(int(message_ref[0]))
-                            
-                            # リプライ処理
-                            try:
-                                reply_message = f"💬リプライ：{interaction.user.display_name}\n{reply_content}"
-                                await message.reply(reply_message)
-                                
-                                await interaction.followup.send(
-                                    f"💬 **リプライしました！**\n\n"
-                                    f"投稿にリプライしました！",
-                                    ephemeral=True
-                                )
-                            except discord.Forbidden:
-                                await interaction.followup.send(
-                                    f"💬 **リプライしました！**\n\n"
-                                    f"投稿にリプライしました！\n"
-                                    f"※権限がないため、メッセージを送信できませんでした。",
-                                    ephemeral=True
-                                )
-                    except discord.NotFound:
-                        logger.warning(f"元の投稿メッセージが見つかりません: {message_ref[0]}")
-                        await interaction.followup.send(
-                            f"💬 **リプライしました！**\n\n"
-                            f"投稿にリプライしました！\n"
-                            f"※元の投稿メッセージが見つかりませんでした。",
-                            ephemeral=True
-                        )
-                else:
-                    await interaction.followup.send(
-                        f"💬 **リプライしました！**\n\n"
-                        f"投稿にリプライしました！",
-                        ephemeral=True
-                    )
-            else:
-                await interaction.followup.send(
-                    f"💬 **リプライしました！**\n\n"
-                    f"投稿にリプライしました！\n"
-                    f"※リプライチャンネルが見つかりませんでした。",
-                    ephemeral=True
-                )
+            # 専用チャンネルへの転送のみで完了
+            await interaction.followup.send(
+                f"💬 **リプライしました！**\n\n"
+                f"リプライチャンネルに投稿を転送しました。",
+                ephemeral=True
+            )
             
         except ValueError:
             await interaction.followup.send(
