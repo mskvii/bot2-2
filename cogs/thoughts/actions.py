@@ -84,7 +84,6 @@ class LikeModal(ui.Modal, title="❤️ いいねする投稿"):
                     description=f"上記の投稿にいいねしました！",
                     color=discord.Color.red()
                 )
-                like_embed.add_field(name="いいねした人", value=interaction.user.display_name, inline=True)
                 like_embed.set_footer(text=f"いいねID: {like_id}")
                 
                 await likes_channel.send(embed=like_embed)
