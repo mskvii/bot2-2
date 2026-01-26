@@ -79,8 +79,7 @@ class Post(commands.Cog):
                 placeholder='公開設定を選択...',
                 min_values=1,
                 max_values=1,
-                options=visibility_options,
-                default='public'
+                options=visibility_options
             )
             
             self.anonymous = ui.TextInput(
