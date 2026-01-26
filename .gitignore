@@ -138,5 +138,5 @@ Thumbs.db
 .temp/
 
 # File-based data management
-data/
-!data/.gitkeep
+# data/ - Commented out to allow GitHub sync
+# !data/.gitkeep
