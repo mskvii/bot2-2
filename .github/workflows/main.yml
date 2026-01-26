@@ -169,15 +169,22 @@ jobs:
         ALLOWED_CHANNEL_IDS: ${{ secrets.ALLOWED_CHANNEL_ID }}
       run: |
         # 既存の実行中のワークフローをチェック
-        RUNNING_JOBS=$(curl -s -H "Authorization: token ${{ github.token }}" \
-          "https://api.github.com/repos/${{ github.repository }}/actions/runs?status=in_progress" | \
-          jq -r '.workflow_runs[] | select(.id != ${{ github.run_id }}) | .id')
+        echo "🔍 APIチェック開始..."
+        echo "📋 自分のジョブID: ${{ github.run_id }}"
+        
+        # APIレスポンスを確認
+        API_RESPONSE=$(curl -s -H "Authorization: token ${{ github.token }}" \
+          "https://api.github.com/repos/${{ github.repository }}/actions/runs?status=in_progress")
+        echo "📡 APIレスポンス: $API_RESPONSE"
+        
+        RUNNING_JOBS=$(echo "$API_RESPONSE" | jq -r '.workflow_runs[] | select(.id != ${{ github.run_id }}) | .id')
+        echo "🔍 検出した実行中ジョブ: $RUNNING_JOBS"
         
         if [ -z "$RUNNING_JOBS" ]; then
-          echo "ボットが実行されていないため、起動します"
+          echo "✅ ボットが実行されていないため、起動します"
           echo "RUN_BOT=true" >> $GITHUB_ENV
         else
-          echo "ボットは既に実行中です"
+          echo "⚠️ ボットは既に実行中です"
           echo "RUN_BOT=false" >> $GITHUB_ENV
         fi
     
