@@ -67,7 +67,7 @@ class LikeModal(ui.Modal, title="❤️ いいねする投稿"):
             
             if likes_channel:
                 embed = discord.Embed(
-                    title="❤️ いいね！",
+                    title=f"❤️ いいね！：{interaction.user.display_name}",
                     description=f"**投稿ID: {post_id}**\n\n{post_content[:200]}{'...' if len(post_content) > 200 else ''}",
                     color=discord.Color.red()
                 )
