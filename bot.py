@@ -46,14 +46,22 @@ class ThoughtBot(commands.Bot):
             logger.warning(f"Cogディレクトリが見つかりません: {cogs_dir}")
             return
         
-        for filename in os.listdir(cogs_dir):
-            if filename.endswith(".py"):
-                try:
-                    cog_path = f"cogs.{filename[:-3]}"
-                    await self.load_extension(cog_path)
-                    logger.info(f"Cogを読み込みました: {cog_path}")
-                except Exception as e:
-                    logger.error(f"Cogの読み込みに失敗しました: {cog_path} - {e}")
+        # thoughtsサブディレクトリも含めて探索
+        for root, dirs, files in os.walk(cogs_dir):
+            for filename in files:
+                if filename.endswith(".py") and not filename.startswith("__"):
+                    # 相対パスをモジュールパスに変換
+                    rel_path = os.path.relpath(root, cogs_dir)
+                    if rel_path == ".":
+                        cog_path = f"cogs.{filename[:-3]}"
+                    else:
+                        cog_path = f"cogs.{rel_path.replace(os.sep, '.')}.{filename[:-3]}"
+                    
+                    try:
+                        await self.load_extension(cog_path)
+                        logger.info(f"Cogを読み込みました: {cog_path}")
+                    except Exception as e:
+                        logger.error(f"Cogの読み込みに失敗しました: {cog_path} - {e}")
     
     async def on_ready(self):
         """ボット準備完了時の処理"""
