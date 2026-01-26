@@ -5,11 +5,16 @@ on:
     branches: [ main ]
   workflow_dispatch:
   schedule:
-    - cron: '*/30 * * * *'  # 30分ごとに実行（UTC）
+    - cron: '*/5 * * * *'  # 5分ごとにチェック
 
 jobs:
   run-bot:
     runs-on: ubuntu-latest
+    
+    # 同じコミットに対して同時に複数のワークフローが実行されないようにする
+    concurrency: 
+      group: bot-${{ github.ref }}
+      cancel-in-progress: true
     
     steps:
     - uses: actions/checkout@v3
@@ -208,8 +213,8 @@ jobs:
         
         echo "ボットが正常に起動しました"
         
-        # 30分間実行して終了（30分後のワークフローが引き継ぐ）
-        for i in {1..30}; do
+        # 無限ループで待機
+        while true; do
           # ボットがまだ実行中か確認
           if ! ps -p $(cat temp/bot.pid) > /dev/null; then
             echo "ボットが終了しました。再起動します..."
@@ -221,14 +226,7 @@ jobs:
           fi
           # 1分ごとにチェック
           sleep 60
-          echo "実行中... ($i/30分)"
         done
-        
-        echo "30分経過しました。ボットは実行を継続します"
-        echo "次のワークフローが起動したら自然に引き継がれます"
-        
-        # ボットは停止せず、次のワークフローに引き継がせる
-        # GitHub Actionsはタイムアウトするが、ボットは実行し続ける
     
     - name: Skip automatic backup
       run: |
