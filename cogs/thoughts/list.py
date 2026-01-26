@@ -131,8 +131,6 @@ class List(commands.Cog):
             limit: 表示件数（デフォルト10件）
         """
         try:
-            await interaction.response.defer(ephemeral=True)
-            
             # ユーザーの投稿を取得
             posts = self.file_manager.search_posts(user_id=str(interaction.user.id))
             
@@ -142,7 +140,7 @@ class List(commands.Cog):
                     description="あなたの投稿がありません。",
                     color=discord.Color.blue()
                 )
-                await interaction.followup.send(embed=embed, ephemeral=True)
+                await interaction.response.send_message(embed=embed, ephemeral=True)
                 return
             
             # 作成日時でソート
@@ -178,7 +176,7 @@ class List(commands.Cog):
             
             embed.set_footer(text=f"最新{limit}件を表示")
             
-            await interaction.followup.send(embed=embed, ephemeral=True)
+            await interaction.response.send_message(embed=embed, ephemeral=True)
             
         except Exception as e:
             logger.error(f"my_postsコマンド実行中にエラーが発生しました: {e}", exc_info=True)
@@ -187,7 +185,7 @@ class List(commands.Cog):
                 description="自分の投稿一覧の取得中にエラーが発生しました。もう一度お試しください。",
                 color=discord.Color.red()
             )
-            await interaction.followup.send(embed=error_embed, ephemeral=True)
+            await interaction.response.send_message(embed=error_embed, ephemeral=True)
 
     @app_commands.command(name='categories', description='📁 カテゴリー一覧を表示')
     async def list_categories(self, interaction: Interaction) -> None:
