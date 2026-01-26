@@ -66,24 +66,13 @@ class LikeModal(ui.Modal, title="❤️ いいねする投稿"):
             likes_channel = interaction.guild.get_channel(likes_channel_id)
             
             if likes_channel:
-                # 元の投稿を転送
-                original_embed = discord.Embed(
-                    title=f"📝 投稿ID: {post_id}",
-                    description=post_content,
-                    color=discord.Color.blue()
-                )
-                original_embed.add_field(name="投稿者", value=post.get('display_name', '名無し'), inline=True)
-                original_embed.add_field(name="カテゴリー", value=post.get('category', 'なし'), inline=True)
-                original_embed.set_footer(text=f"投稿日時: {post.get('created_at', '不明')}")
-                
-                await likes_channel.send(embed=original_embed)
-                
                 # いいねしたことを投稿
                 like_embed = discord.Embed(
-                    title=f"❤️ いいね！：{interaction.user.display_name}",
-                    description=f"上記の投稿にいいねしました！",
+                    title=f"❤️ {interaction.user.display_name}がいいねしました",
+                    description=f"**投稿ID: {post_id}**\n\n{post_content[:200]}{'...' if len(post_content) > 200 else ''}",
                     color=discord.Color.red()
                 )
+                like_embed.add_field(name="投稿者", value=post.get('display_name', '名無し'), inline=True)
                 like_embed.set_footer(text=f"いいねID: {like_id}")
                 
                 await likes_channel.send(embed=like_embed)
@@ -259,24 +248,13 @@ class ReplyModal(ui.Modal, title="💬 リプライする投稿"):
             replies_channel = interaction.guild.get_channel(replies_channel_id)
             
             if replies_channel:
-                # 元の投稿を転送
-                original_embed = discord.Embed(
-                    title=f"� 投稿ID: {post_id}",
-                    description=parent_post.get('content', ''),
-                    color=discord.Color.blue()
-                )
-                original_embed.add_field(name="投稿者", value=parent_post.get('display_name', '名無し'), inline=True)
-                original_embed.add_field(name="カテゴリー", value=parent_post.get('category', 'なし'), inline=True)
-                original_embed.set_footer(text=f"投稿日時: {parent_post.get('created_at', '不明')}")
-                
-                await replies_channel.send(embed=original_embed)
-                
                 # リプライを投稿
                 reply_embed = discord.Embed(
-                    title=f"💬 リプライ：{interaction.user.display_name}",
-                    description=reply_content,
+                    title=f"💬 {interaction.user.display_name}がリプライしました",
+                    description=f"**投稿ID: {post_id}へのリプライ**\n\n{reply_content}",
                     color=discord.Color.green()
                 )
+                reply_embed.add_field(name="投稿者", value=parent_post.get('display_name', '名無し'), inline=True)
                 reply_embed.set_footer(text=f"リプライID: {reply_id}")
                 
                 await replies_channel.send(embed=reply_embed)
