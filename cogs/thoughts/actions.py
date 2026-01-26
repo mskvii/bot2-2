@@ -347,7 +347,7 @@ class ReplyModal(ui.Modal, title="💬 リプライする投稿"):
                 ephemeral=True
             )
         except Exception as e:
-            logger.error(f"リプライ処理中にエラーが発生しました: {e}")
+            logger.error(f"リプライ処理中にエラーが発生しました: {e}", exc_info=True)
             await interaction.followup.send(
                 "💬 エラーが発生しました。もう一度お試しください。",
                 ephemeral=True
