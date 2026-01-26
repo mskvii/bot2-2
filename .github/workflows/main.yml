@@ -216,8 +216,8 @@ jobs:
         
         echo "ボットが正常に起動しました"
         
-        # 55分間実行して終了（次のワークフローが引き継ぐ）
-        for i in {1..55}; do
+        # 無限ループで55分間繰り返し実行
+        while true; do
           # ボットがまだ実行中か確認
           if ! ps -p $(cat temp/bot.pid) > /dev/null; then
             echo "ボットが終了しました。再起動します..."
@@ -229,11 +229,8 @@ jobs:
           fi
           # 1分ごとにチェック
           sleep 60
-          echo "実行中... ($i/55分)"
+          echo "55分間繰り返し実行中..."
         done
-        
-        echo "55分経過しました。ボットは実行を継続します"
-        echo "次のワークフローが起動したら自然に引き継がれます"
     
     - name: Skip automatic backup
       run: |
