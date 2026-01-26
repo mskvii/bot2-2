@@ -401,6 +401,142 @@ class Actions(commands.Cog):
                 )
             except:
                 logger.error("リプライコマンドのエラーメッセージ送信に失敗しました")
+    
+    @app_commands.command(name="unlike", description="💔 いいねを削除")
+    async def unlike_command(self, interaction: Interaction) -> None:
+        """いいね削除コマンド"""
+        try:
+            logger.info(f"いいね削除コマンド実行: ユーザー {interaction.user.name} (ID: {interaction.user.id})")
+            modal = UnlikeModal()
+            await interaction.response.send_modal(modal)
+        except Exception as e:
+            logger.error(f"いいね削除コマンド実行中にエラーが発生しました: {e}", exc_info=True)
+            try:
+                await interaction.response.send_message(
+                    "エラーが発生しました。もう一度お試しください。",
+                    ephemeral=True
+                )
+            except:
+                logger.error("いいね削除コマンドのエラーメッセージ送信に失敗しました")
+
+
+class UnlikeModal(ui.Modal, title="💔 いいねを削除"):
+    """いいねを削除する投稿IDを入力するモーダル"""
+    
+    def __init__(self):
+        super().__init__(timeout=300)
+        self.file_manager = FileManager()
+        
+        self.post_id_input = ui.TextInput(
+            label="📝 投稿ID",
+            placeholder="いいねを削除する投稿のIDを入力...",
+            required=True,
+            style=discord.TextStyle.short,
+            max_length=10
+        )
+        
+        self.add_item(self.post_id_input)
+    
+    async def on_submit(self, interaction: Interaction) -> None:
+        """いいね削除実行"""
+        try:
+            await interaction.response.defer(ephemeral=True)
+            
+            post_id = int(self.post_id_input.value.strip())
+            user_id = str(interaction.user.id)
+            
+            # 投稿の存在確認
+            post = self.file_manager.get_post(post_id)
+            if not post:
+                await interaction.followup.send(
+                    "❌ **投稿が見つかりません**\n\n"
+                    f"投稿ID: {post_id} の投稿が存在しません。",
+                    ephemeral=True
+                )
+                return
+            
+            # ユーザーのいいねを検索
+            likes_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 
+                                    'data', 'likes')
+            
+            like_found = False
+            like_file_path = None
+            
+            if os.path.exists(likes_dir):
+                for filename in os.listdir(likes_dir):
+                    if filename.startswith(f'{post_id}_') and filename.endswith('.json'):
+                        like_file_path = os.path.join(likes_dir, filename)
+                        try:
+                            with open(like_file_path, 'r', encoding='utf-8') as f:
+                                like_data = json.load(f)
+                            
+                            # いいねしたユーザーが一致するか確認
+                            if like_data.get('user_id') == user_id:
+                                like_found = True
+                                break
+                        except (json.JSONDecodeError, FileNotFoundError):
+                            continue
+            
+            if not like_found:
+                await interaction.followup.send(
+                    "❌ **いいねが見つかりません**\n\n"
+                    f"投稿ID: {post_id} にあなたのいいねが見つかりません。",
+                    ephemeral=True
+                )
+                return
+            
+            # いいねファイルを削除
+            os.remove(like_file_path)
+            logger.info(f"いいねを削除しました: 投稿ID={post_id}, ユーザーID={user_id}")
+            
+            # 元の投稿メッセージを取得していいねメッセージを削除
+            message_ref_file = os.path.join("data", f"message_ref_{post_id}.json")
+            if os.path.exists(message_ref_file):
+                try:
+                    with open(message_ref_file, 'r', encoding='utf-8') as f:
+                        message_ref = json.load(f)
+                    
+                    channel_id = message_ref[0]
+                    message_id = message_ref[1]
+                    
+                    channel = interaction.guild.get_channel(int(channel_id))
+                    if channel:
+                        message = await channel.fetch_message(int(message_id))
+                        
+                        # いいねメッセージを検索して削除
+                        async for msg in message.channel.history(around=message, limit=10):
+                            if (msg.author == interaction.guild.me and 
+                                msg.reference and 
+                                msg.reference.message_id == message.id and
+                                f"❤️いいね：{interaction.user.display_name}" in msg.content):
+                                await msg.delete()
+                                logger.info(f"いいねメッセージを削除しました: メッセージID={msg.id}")
+                                break
+                except (json.JSONDecodeError, FileNotFoundError, discord.NotFound, discord.Forbidden):
+                    pass
+            
+            await interaction.followup.send(
+                f"💔 **いいねを削除しました**\n\n"
+                f"投稿ID: {post_id} のいいねを削除しました。",
+                ephemeral=True
+            )
+            
+            # GitHubに保存する処理
+            from .github_sync import sync_to_github
+            await sync_to_github("unlike", interaction.user.name, post_id)
+            
+        except ValueError:
+            await interaction.followup.send(
+                "❌ **エラーが発生しました**\n\n"
+                "投稿IDは数字で入力してください。",
+                ephemeral=True
+            )
+        except Exception as e:
+            logger.error(f"いいね削除処理中にエラーが発生しました: {e}")
+            await interaction.followup.send(
+                "💔 エラーが発生しました。もう一度お試しください。",
+                ephemeral=True
+            )
 
 
 async def setup(bot: commands.Bot) -> None:
@@ -413,6 +549,7 @@ async def setup(bot: commands.Bot) -> None:
         # コマンドが正常に登録されたか確認
         like_cmd = bot.tree.get_command('like')
         reply_cmd = bot.tree.get_command('reply')
+        unlike_cmd = bot.tree.get_command('unlike')
         
         if like_cmd:
             logger.info("✅ /like コマンドが正常に登録されました")
@@ -423,6 +560,11 @@ async def setup(bot: commands.Bot) -> None:
             logger.info("✅ /reply コマンドが正常に登録されました")
         else:
             logger.error("❌ /reply コマンドの登録に失敗しました")
+            
+        if unlike_cmd:
+            logger.info("✅ /unlike コマンドが正常に登録されました")
+        else:
+            logger.error("❌ /unlike コマンドの登録に失敗しました")
             
     except Exception as e:
         logger.error(f"Actions cog のセットアップ中にエラーが発生しました: {e}", exc_info=True)
