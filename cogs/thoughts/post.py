@@ -41,7 +41,7 @@ class Post(commands.Cog):
             await interaction.response.defer()
     
     class PostModal(ui.Modal, title='新規投稿'):
-        def __init__(self, cog=None) -> None:
+        def __init__(self, cog) -> None:
             super().__init__(timeout=None)  # 無制限に設定
             self.cog = cog
             self.is_public = True  # デフォルトは公開
@@ -345,16 +345,10 @@ class Post(commands.Cog):
                 logger.info("モーダルのインスタンス作成に成功しました")
             except Exception as e:
                 logger.error(f"モーダルのインスタンス作成中にエラー: {e}", exc_info=True)
-                if not interaction.response.is_done():
-                    await interaction.response.send_message(
-                        "❌ エラーが発生しました。もう一度お試しください。",
-                        ephemeral=True
-                    )
-                else:
-                    await interaction.followup.send(
-                        "❌ エラーが発生しました。もう一度お試しください。",
-                        ephemeral=True
-                    )
+                await interaction.response.send_message(
+                    "❌ エラーが発生しました。もう一度お試しください。",
+                    ephemeral=True
+                )
                 return
             
             # モーダルを送信
@@ -369,24 +363,17 @@ class Post(commands.Cog):
                 )
             except Exception as e:
                 logger.error(f"モーダルの送信中にエラー: {e}", exc_info=True)
-                if not interaction.response.is_done():
-                    await interaction.response.send_message(
-                        "❌ エラーが発生しました。もう一度お試しください。",
-                        ephemeral=True
-                    )
-                else:
-                    await interaction.followup.send(
-                        "❌ エラーが発生しました。もう一度お試しください。",
-                        ephemeral=True
-                    )
+                await interaction.response.send_message(
+                    "❌ エラーが発生しました。もう一度お試しください。",
+                    ephemeral=True
+                )
         
         except Exception as e:
             logger.error(f"postコマンド実行中に予期しないエラーが発生しました: {e}", exc_info=True)
-            if not interaction.response.is_done():
-                await interaction.response.send_message(
-                    f"予期しないエラーが発生しました: {str(e)}",
-                    ephemeral=True
-                )
+            await interaction.response.send_message(
+                f"予期しないエラーが発生しました: {str(e)}",
+                ephemeral=True
+            )
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Post(bot))
