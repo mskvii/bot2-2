@@ -70,16 +70,14 @@ class Post(commands.Cog):
                 max_length=500
             )
             
-            visibility_options = [
-                discord.SelectOption(label='公開', value='public', description='誰でも見ることができます', emoji='👥'),
-                discord.SelectOption(label='非公開', value='private', description='自分と管理者のみが削除できます', emoji='🔒')
-            ]
-            
-            self.visibility = ui.Select(
-                placeholder='公開設定を選択...',
-                min_values=1,
-                max_values=1,
-                options=visibility_options
+            # 公開設定をTextInputに変更
+            self.visibility = ui.TextInput(
+                label='🌐 公開設定',
+                placeholder='公開または非公開を入力',
+                required=False,
+                style=discord.TextStyle.short,
+                max_length=10,
+                default='公開'
             )
             
             self.anonymous = ui.TextInput(
@@ -93,8 +91,8 @@ class Post(commands.Cog):
             self.add_item(self.message)
             self.add_item(self.category)
             self.add_item(self.image_url)
-            self.add_item(self.anonymous)
             self.add_item(self.visibility)
+            self.add_item(self.anonymous)
 
         async def on_submit(self, interaction: Interaction) -> None:
             """投稿内容をデータベースに保存"""
@@ -111,8 +109,8 @@ class Post(commands.Cog):
                 message = self.message.value
                 category = self.category.value if self.category.value else None
                 image_url = self.image_url.value if self.image_url.value else None
-                # visibilityはSelectなのでvalues[0]で取得
-                visibility_value = (self.visibility.values[0] if self.visibility.values else "public").strip().lower()
+                # visibilityはTextInputなのでvalueで取得
+                visibility_value = (self.visibility.value or "").strip().lower()
                 if visibility_value in {"公開", "public"}:
                     is_public = True
                 elif visibility_value in {"非公開", "private"}:
