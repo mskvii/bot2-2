@@ -65,9 +65,8 @@ class List(commands.Cog):
             )
             
             for post in my_posts:
-                # 投稿内容（短く）
+                # 投稿内容（文字数制限なし）
                 content = post.get('content', '')
-                content_preview = content[:100] + "..." if len(content) > 100 else content
                 
                 # 公開/非公開ステータス
                 status = "🔒 非公開" if post.get('is_private') else "🌐 公開"
@@ -75,7 +74,7 @@ class List(commands.Cog):
                 # フィールドを追加
                 embed.add_field(
                     name=f"ID: {post['id']} ({status})",
-                    value=content_preview,
+                    value=content,
                     inline=False
                 )
             
