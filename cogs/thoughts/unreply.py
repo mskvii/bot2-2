@@ -44,95 +44,59 @@ class UnreplyModal(ui.Modal, title="🗑️ リプライを削除"):
             logger.info(f"リプライ削除試行: リプライID={reply_id}, ユーザーID={user_id}")
             
             # リプライファイルを検索
-            replies_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 
-                                     'data', 'replies')
+            logger.info(f"リプライ削除試行: リプライID={reply_id}, ユーザーID={user_id}")
             
-            logger.info(f"リプライディレクトリ: {replies_dir}")
+            # file_managerを使ってリプライを検索
+            reply_data = self.file_manager.get_reply_by_id_and_user(reply_id, user_id)
             
-            reply_found = False
-            reply_file_path = None
-            reply_data = None
-            
-            if os.path.exists(replies_dir):
-                logger.info(f"リプライディレクトリが存在します")
-                files = os.listdir(replies_dir)
-                logger.info(f"リプライファイル一覧: {files}")
-                
-                for filename in files:
-                    if filename.endswith('.json'):
-                        reply_file_path = os.path.join(replies_dir, filename)
-                        try:
-                            with open(reply_file_path, 'r', encoding='utf-8') as f:
-                                data = json.load(f)
-                            
-                            logger.info(f"ファイル {filename} のデータ: {data}")
-                            
-                            # リプライIDとユーザーが一致するか確認
-                            if (data.get('id') == reply_id and 
-                                data.get('user_id') == user_id):
-                                reply_found = True
-                                reply_data = data
-                                logger.info(f"リプライが見つかりました: {reply_file_path}")
-                                break
-                        except (json.JSONDecodeError, FileNotFoundError) as e:
-                            logger.error(f"ファイル読み込みエラー {filename}: {e}")
-                            continue
-            else:
-                logger.warning(f"リプライディレクトリが存在しません: {replies_dir}")
-            
-            if not reply_found:
+            if not reply_data:
                 logger.warning(f"リプライが見つかりませんでした: リプライID={reply_id}, ユーザーID={user_id}")
                 await interaction.followup.send(
                     "❌ **リプライが見つかりません**\n\n"
-                    f"リプライID: {reply_id} のリプライが見つからないか、あなたのリプライではありません。",
+                    f"リプライID: {reply_id} にあなたのリプライが見つかりません。",
                     ephemeral=True
                 )
                 return
             
+            logger.info(f"リプライが見つかりました: {reply_data}")
+            
             # リプライファイルを削除
-            if reply_file_path and os.path.exists(reply_file_path):
-                # ファイルからメッセージIDを取得して削除
-                try:
-                    with open(reply_file_path, 'r', encoding='utf-8') as f:
-                        reply_data = json.load(f)
-                        message_id = reply_data.get('message_id')
-                        channel_id = reply_data.get('channel_id')
-                        forwarded_message_id = reply_data.get('forwarded_message_id')
-                    
-                    if message_id and channel_id:
-                        # リプライチャンネルのメッセージを削除
-                        replies_channel = interaction.guild.get_channel(int(channel_id))
-                        if replies_channel:
-                            # リプライメッセージを削除
-                            try:
-                                reply_message = await replies_channel.fetch_message(int(message_id))
-                                await reply_message.delete()
-                                logger.info(f"リプライメッセージを削除しました: メッセージID={message_id}")
-                            except (discord.NotFound, discord.Forbidden):
-                                logger.warning(f"リプライメッセージの削除に失敗しました: {message_id}")
-                            
-                            # 転送メッセージも削除
-                            if forwarded_message_id:
-                                try:
-                                    forwarded_message = await replies_channel.fetch_message(int(forwarded_message_id))
-                                    await forwarded_message.delete()
-                                    logger.info(f"転送メッセージを削除しました: メッセージID={forwarded_message_id}")
-                                except (discord.NotFound, discord.Forbidden):
-                                    logger.warning(f"転送メッセージの削除に失敗しました: {forwarded_message_id}")
-                except (json.JSONDecodeError, FileNotFoundError):
-                    pass
-                
-                # ファイルを削除
-                os.remove(reply_file_path)
-                logger.info(f"リプライを削除しました: リプライID={reply_id}, ユーザーID={user_id}")
-            else:
-                logger.error(f"リプライファイルが見つかりません: {reply_file_path}")
+            success = self.file_manager.delete_reply(reply_id, user_id)
+            
+            if not success:
+                logger.error(f"リプライの削除に失敗しました: リプライID={reply_id}, ユーザーID={user_id}")
                 await interaction.followup.send(
                     "❌ **エラーが発生しました**\n\n"
-                    "リプライファイルが見つかりません。",
+                    "リプライの削除に失敗しました。",
                     ephemeral=True
                 )
                 return
+            
+            # Discordメッセージを削除
+            message_id = reply_data.get('message_id')
+            channel_id = reply_data.get('channel_id')
+            forwarded_message_id = reply_data.get('forwarded_message_id')
+            
+            if message_id and channel_id:
+                # リプライチャンネルのメッセージを削除
+                replies_channel = interaction.guild.get_channel(int(channel_id))
+                if replies_channel:
+                    # リプライメッセージを削除
+                    try:
+                        reply_message = await replies_channel.fetch_message(int(message_id))
+                        await reply_message.delete()
+                        logger.info(f"リプライメッセージを削除しました: メッセージID={message_id}")
+                    except (discord.NotFound, discord.Forbidden):
+                        logger.warning(f"リプライメッセージの削除に失敗しました: {message_id}")
+                    
+                    # 転送メッセージも削除
+                    if forwarded_message_id:
+                        try:
+                            forwarded_message = await replies_channel.fetch_message(int(forwarded_message_id))
+                            await forwarded_message.delete()
+                            logger.info(f"転送メッセージを削除しました: メッセージID={forwarded_message_id}")
+                        except (discord.NotFound, discord.Forbidden):
+                            logger.warning(f"転送メッセージの削除に失敗しました: {forwarded_message_id}")
             
             await interaction.followup.send(
                 f"✅ リプライを削除しました！\n\n"
@@ -141,11 +105,17 @@ class UnreplyModal(ui.Modal, title="🗑️ リプライを削除"):
                 ephemeral=True
             )
             
+        except ValueError:
+            await interaction.followup.send(
+                "❌ **エラーが発生しました**\n\n"
+                "リプライIDは数字で入力してください。",
+                ephemeral=True
+            )
         except Exception as e:
             logger.error(f"リプライ削除中にエラーが発生しました: {e}", exc_info=True)
             await interaction.followup.send(
                 "❌ **エラーが発生しました**\n\n"
-                "リプライの削除中にエラーが発生しました。もう一度お試しください。",
+                "リプライの削除に失敗しました。",
                 ephemeral=True
             )
 
