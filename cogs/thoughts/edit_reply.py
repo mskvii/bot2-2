@@ -145,41 +145,31 @@ class ReplyEditModal(ui.Modal, title="💬 リプライを編集"):
         try:
             await interaction.response.defer(ephemeral=True)
             
-            # ファイルからリプライを更新
+            # file_managerを使ってリプライを更新
             post_id = self.reply_data.get('post_id')
             reply_id = self.reply_data.get('id')
             
-            # リプライファイルを更新
-            reply_file = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 
-                                      'data', 'replies', f'{post_id}_{reply_id}.json')
+            # リプライを更新
+            success = self.file_manager.update_reply(post_id, reply_id, self.content_input.value)
             
-            if os.path.exists(reply_file):
-                import json
-                with open(reply_file, 'r', encoding='utf-8') as f:
-                    reply_data = json.load(f)
-                
-                # 内容を更新
-                reply_data['content'] = self.content_input.value
-                reply_data['updated_at'] = datetime.now().isoformat()
-                
-                with open(reply_file, 'w', encoding='utf-8') as f:
-                    json.dump(reply_data, f, ensure_ascii=False, indent=2)
-                
-                logger.info(f"リプライを更新しました: 投稿ID={post_id}, リプライID={reply_id}")
-                
+            if not success:
+                logger.error(f"リプライの更新に失敗しました: 投稿ID={post_id}, リプライID={reply_id}")
                 await interaction.followup.send(
-                    f"✅ **リプライを更新しました**\n\n"
-                    f"投稿ID: {post_id}\n"
-                    f"リプライID: {reply_id}",
+                    "❌ **エラーが発生しました**\n\n"
+                    "リプライの更新に失敗しました。",
                     ephemeral=True
                 )
-            else:
-                await interaction.followup.send(
-                    "❌ **リプライが見つかりません**\n\n"
-                    "リプライファイルが存在しません。",
-                    ephemeral=True
-                )
-                
+                return
+            
+            logger.info(f"リプライを更新しました: 投稿ID={post_id}, リプライID={reply_id}")
+            
+            await interaction.followup.send(
+                f"✅ **リプライを更新しました**\n\n"
+                f"投稿ID: {post_id}\n"
+                f"リプライID: {reply_id}",
+                ephemeral=True
+            )
+            
         except Exception as e:
             logger.error(f"リプライ編集中にエラーが発生しました: {e}")
             await interaction.followup.send(

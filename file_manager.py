@@ -1,7 +1,10 @@
 import json
 import os
+import logging
 from typing import Dict, Any, List, Optional
 from datetime import datetime
+
+logger = logging.getLogger(__name__)
 
 class FileManager:
     """ファイルベースのデータ管理"""

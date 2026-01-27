@@ -298,21 +298,8 @@ class Post(commands.Cog):
                     # DBにはスレッドIDを保存
                     channel = thread
                 
-                # メッセージ参照をファイルに保存
-                message_ref_data = {
-                    "post_id": post_id,
-                    "message_id": sent_message.id,
-                    "channel_id": channel.id,
-                    "user_id": interaction.user.id,
-                    "created_at": datetime.now().isoformat()
-                }
-                
-                message_ref_file = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 
-                                               'data', f'message_ref_{post_id}.json')
-                with open(message_ref_file, 'w', encoding='utf-8') as f:
-                    import json
-                    json.dump(message_ref_data, f, ensure_ascii=False, indent=2)
-                
+                # メッセージ参照を保存
+                self.file_manager.save_message_ref(post_id, str(sent_message.id), str(sent_message.channel.id), str(interaction.user.id))
                 logger.info(f"メッセージ参照を保存しました: 投稿ID={post_id}")
                 
                 # 公開投稿の場合のみ完了メッセージを送信（非公開は既に送信済み）

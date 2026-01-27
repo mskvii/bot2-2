@@ -148,13 +148,9 @@ class DeleteConfirmModal(ui.Modal, title="🗑️ 投稿削除確認"):
             post_id = self.post_data['id']
             
             # 投稿ファイルを削除
-            post_file = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 
-                                   'data', 'posts', f'{post_id}.json')
-            
-            if os.path.exists(post_file):
-                os.remove(post_file)
-                logger.info(f"投稿を削除しました: 投稿ID={post_id}")
-            else:
+            success = self.cog.file_manager.delete_post(post_id)
+            if not success:
+                logger.error(f"投稿の削除に失敗しました: 投稿ID={post_id}")
                 await interaction.followup.send(
                     "❌ **投稿が見つかりません**\n\n"
                     "投稿ファイルが存在しません。",
@@ -162,73 +158,14 @@ class DeleteConfirmModal(ui.Modal, title="🗑️ 投稿削除確認"):
                 )
                 return
             
-            # メッセージ参照ファイルを削除
-            message_ref_file = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 
-                                           'data', f'message_ref_{post_id}.json')
-            if os.path.exists(message_ref_file):
-                # メッセージ参照データを読み込んでDiscordメッセージを削除
-                try:
-                    import json
-                    with open(message_ref_file, 'r', encoding='utf-8') as f:
-                        message_ref_data = json.load(f)
-                    
-                    message_id = message_ref_data.get('message_id')
-                    channel_id = message_ref_data.get('channel_id')
-                    
-                    if message_id and channel_id:
-                        try:
-                            channel = interaction.guild.get_channel(int(channel_id))
-                            if channel:
-                                message = await channel.fetch_message(int(message_id))
-                                await message.delete()
-                                logger.info(f"Discordメッセージを削除しました: メッセージID={message_id}")
-                        except discord.NotFound:
-                            logger.warning(f"Discordメッセージが見つかりません: メッセージID={message_id}")
-                        except discord.Forbidden:
-                            logger.warning(f"Discordメッセージの削除権限がありません: メッセージID={message_id}")
-                        except Exception as e:
-                            logger.error(f"Discordメッセージ削除中にエラー: {e}")
-                except (json.JSONDecodeError, FileNotFoundError):
-                    pass
-                
-                # メッセージ参照ファイルを削除
-                os.remove(message_ref_file)
+            logger.info(f"投稿を削除しました: 投稿ID={post_id}")
+            
+            # メッセージ参照を削除
+            self.cog.file_manager.delete_message_ref(post_id)
             
             # 関連するリプライを削除
-            replies_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 
-                                      'data', 'replies')
-            if os.path.exists(replies_dir):
-                import json
-                for filename in os.listdir(replies_dir):
-                    if filename.startswith(f'{post_id}_') and filename.endswith('.json'):
-                        reply_file = os.path.join(replies_dir, filename)
-                        try:
-                            with open(reply_file, 'r', encoding='utf-8') as f:
-                                reply_data = json.load(f)
-                            
-                            # リプライのDiscordメッセージを削除
-                            reply_message_id = reply_data.get('message_id')
-                            reply_channel_id = reply_data.get('channel_id')
-                            
-                            if reply_message_id and reply_channel_id:
-                                try:
-                                    channel = interaction.guild.get_channel(int(reply_channel_id))
-                                    if channel:
-                                        reply_message = await channel.fetch_message(int(reply_message_id))
-                                        await reply_message.delete()
-                                        logger.info(f"リプライメッセージを削除しました: メッセージID={reply_message_id}")
-                                except discord.NotFound:
-                                    logger.warning(f"リプライメッセージが見つかりません: メッセージID={reply_message_id}")
-                                except discord.Forbidden:
-                                    logger.warning(f"リプライメッセージの削除権限がありません: メッセージID={reply_message_id}")
-                                except Exception as e:
-                                    logger.error(f"リプライメッセージ削除中にエラー: {e}")
-                            
-                            # リプライファイルを削除
-                            os.remove(reply_file)
-                            logger.info(f"リプライを削除しました: {filename}")
-                        except (json.JSONDecodeError, FileNotFoundError):
-                            os.remove(reply_file)  # ファイルが破損している場合は削除
+            deleted_replies = self.cog.file_manager.delete_replies_by_post_id(post_id)
+            logger.info(f"リプライを削除しました: {deleted_replies}件")
             
             # 関連するいいねを削除
             likes_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 

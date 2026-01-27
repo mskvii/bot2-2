@@ -63,53 +63,28 @@ class LikeModal(ui.Modal, title="❤️ いいねする投稿"):
             likes_channel = interaction.guild.get_channel(likes_channel_id)
             
             if likes_channel:
-                # 元の投稿メッセージを取得して転送
-                message_ref_file = os.path.join("data", f"message_ref_{post_id}.json")
-                if os.path.exists(message_ref_file):
-                    try:
-                        with open(message_ref_file, 'r', encoding='utf-8') as f:
-                            message_ref_data = json.load(f)
-                            message_id = message_ref_data.get('message_id')
-                            channel_id = message_ref_data.get('channel_id')
-                        
-                        if message_id and channel_id:
-                            # 元の投稿メッセージを取得
-                            original_channel = interaction.guild.get_channel(int(channel_id))
-                            if original_channel:
-                                original_message = await original_channel.fetch_message(int(message_id))
-                                
-                                # 元の投稿を転送
-                                forwarded_message = await original_message.forward(likes_channel)
-                                
-                                # いいねしたことを投稿
-                                like_message = await likes_channel.send(f"❤️ いいね：{interaction.user.display_name}")
-                                
-                                # いいねファイルに両方のメッセージIDを保存
-                                self.file_manager.update_like_message_id(like_id, str(like_message.id), str(likes_channel.id), str(forwarded_message.id))
-                            else:
-                                # チャンネルが見つからない場合は従来通り
-                                like_embed = discord.Embed(
-                                    title=f"❤️ いいね：{interaction.user.display_name}",
-                                    description=f"**投稿ID: {post_id}**\n\n{post.get('content', '')}",
-                                    color=discord.Color.red()
-                                )
-                                like_embed.add_field(name="投稿者", value=post.get('display_name', '名無し'), inline=True)
-                                like_embed.set_footer(text=f"いいねID: {like_id}")
-                                like_message = await likes_channel.send(embed=like_embed)
-                                self.file_manager.update_like_message_id(like_id, str(like_message.id), str(likes_channel.id))
-                        else:
-                            # メッセージ参照がない場合は従来通り
-                            like_embed = discord.Embed(
-                                title=f"❤️ いいね：{interaction.user.display_name}",
-                                description=f"**投稿ID: {post_id}**\n\n{post.get('content', '')}",
-                                color=discord.Color.red()
-                            )
-                            like_embed.add_field(name="投稿者", value=post.get('display_name', '名無し'), inline=True)
-                            like_embed.set_footer(text=f"いいねID: {like_id}")
-                            like_message = await likes_channel.send(embed=like_embed)
-                            self.file_manager.update_like_message_id(like_id, str(like_message.id), str(likes_channel.id))
-                    except (json.JSONDecodeError, FileNotFoundError, discord.NotFound, discord.Forbidden):
-                        # エラーの場合は従来通り
+                # 元の投稿メッセージ参照を取得
+                message_ref_data = self.file_manager.get_message_ref(post_id)
+                if message_ref_data:
+                    message_id = message_ref_data.get('message_id')
+                    channel_id = message_ref_data.get('channel_id')
+                    
+                    if message_id and channel_id:
+                        # 元の投稿メッセージを取得
+                        original_channel = interaction.guild.get_channel(int(channel_id))
+                        if original_channel:
+                            original_message = await original_channel.fetch_message(int(message_id))
+                            
+                            # 元の投稿を転送
+                            forwarded_message = await original_message.forward(likes_channel)
+                            
+                            # いいねしたことを投稿
+                            like_message = await likes_channel.send(f"❤️ いいね：{interaction.user.display_name}")
+                            
+                            # いいねファイルに両方のメッセージIDを保存
+                            self.file_manager.update_like_message_id(like_id, str(like_message.id), str(likes_channel.id), str(forwarded_message.id))
+                    else:
+                        # チャンネルが見つからない場合は従来通り
                         like_embed = discord.Embed(
                             title=f"❤️ いいね：{interaction.user.display_name}",
                             description=f"**投稿ID: {post_id}**\n\n{post.get('content', '')}",
@@ -120,7 +95,7 @@ class LikeModal(ui.Modal, title="❤️ いいねする投稿"):
                         like_message = await likes_channel.send(embed=like_embed)
                         self.file_manager.update_like_message_id(like_id, str(like_message.id), str(likes_channel.id))
                 else:
-                    # メッセージ参照ファイルがない場合は従来通り
+                    # メッセージ参照がない場合は従来通り
                     like_embed = discord.Embed(
                         title=f"❤️ いいね：{interaction.user.display_name}",
                         description=f"**投稿ID: {post_id}**\n\n{post.get('content', '')}",

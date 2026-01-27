@@ -37,20 +37,14 @@ class Edit(commands.Cog):
             # メッセージリストを作成
             items_list = []
             for post in posts[:25]:  # 最大25件
-                # メッセージ参照ファイルを確認
-                message_ref_file = os.path.join("data", f"message_ref_{post['id']}.json")
-                message_id = None
-                channel_id = None
-                
-                if os.path.exists(message_ref_file):
-                    try:
-                        import json
-                        with open(message_ref_file, 'r', encoding='utf-8') as f:
-                            message_ref_data = json.load(f)
-                            message_id = message_ref_data.get('message_id')
-                            channel_id = message_ref_data.get('channel_id')
-                    except (json.JSONDecodeError, FileNotFoundError):
-                        pass
+                # メッセージ参照を取得
+                message_ref_data = self.file_manager.get_message_ref(post['id'])
+                if message_ref_data:
+                    message_id = message_ref_data.get('message_id')
+                    channel_id = message_ref_data.get('channel_id')
+                else:
+                    message_id = None
+                    channel_id = None
                 
                 items_list.append({
                     'type': 'post',
@@ -169,32 +163,28 @@ class PostEditModal(ui.Modal, title="投稿を編集"):
             new_category = self.category_input.value.strip() or None
             new_image_url = self.image_url_input.value.strip() or None
             
-            # ファイルを更新
-            post_file = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 
-                                   'data', 'posts', f"{self.post_data['id']}.json")
+            # 公開設定を処理（現在の設定を維持）
+            is_public = not self.post_data.get('is_private', False)
             
-            if os.path.exists(post_file):
-                import json
-                with open(post_file, 'r', encoding='utf-8') as f:
-                    post_data = json.load(f)
-                
-                # 内容を更新
-                post_data['content'] = new_content
-                post_data['category'] = new_category
-                post_data['image_url'] = new_image_url
-                post_data['updated_at'] = datetime.now().isoformat()
-                
-                with open(post_file, 'w', encoding='utf-8') as f:
-                    json.dump(post_data, f, ensure_ascii=False, indent=2)
-                
-                logger.info(f"投稿を更新しました: 投稿ID={self.post_data['id']}")
-            else:
+            # file_managerを使って投稿を更新
+            success = self.cog.file_manager.update_post(
+                post_id=self.post_data['id'],
+                user_id=str(interaction.user.id),
+                content=new_content,
+                category=new_category,
+                image_url=new_image_url,
+                is_private=not is_public  # 公開設定を更新
+            )
+            
+            if not success:
                 await interaction.followup.send(
                     "❌ **投稿が見つかりません**\n\n"
-                    "投稿ファイルが存在しません。",
+                    "投稿ファイルが存在しないか、権限がありません。",
                     ephemeral=True
                 )
                 return
+            
+            logger.info(f"投稿を更新しました: 投稿ID={self.post_data['id']}")
             
             # Discordメッセージも更新
             if self.post_data.get('message_id') and self.post_data.get('channel_id'):

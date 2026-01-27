@@ -312,7 +312,7 @@ class SearchView(ui.View):
             logger.info(f"ランダム選択された投稿: ID={post['id']}")
             
             # アクションを記録
-            self._log_action(interaction.user.id, 'lucky', post['id'], {
+            self.file_manager.save_action_record('lucky', str(interaction.user.id), str(post['id']), {
                 'post_content': post['content'][:100],
                 'category': post['category']
             })

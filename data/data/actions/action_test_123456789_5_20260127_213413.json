@@ -1,0 +1,9 @@
+{
+  "action_type": "test",
+  "user_id": "123456789",
+  "target_id": "5",
+  "timestamp": "2026-01-27T21:34:13.867108",
+  "data": {
+    "test": "data"
+  }
+}
