@@ -299,7 +299,7 @@ class Post(commands.Cog):
                     channel = thread
                 
                 # メッセージ参照を保存
-                self.file_manager.save_message_ref(post_id, str(sent_message.id), str(sent_message.channel.id), str(interaction.user.id))
+                self.cog.file_manager.save_message_ref(post_id, str(sent_message.id), str(sent_message.channel.id), str(interaction.user.id))
                 logger.info(f"メッセージ参照を保存しました: 投稿ID={post_id}")
                 
                 # 公開投稿の場合のみ完了メッセージを送信（非公開は既に送信済み）
