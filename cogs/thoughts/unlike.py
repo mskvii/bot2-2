@@ -80,7 +80,7 @@ class UnlikeModal(ui.Modal, title="🚫 いいねを削除"):
                 )
                 return
             
-            # Discordメッセージを削除（タイムアウト対策）
+            # Discordメッセージを確実に削除
             message_id = like_data.get('message_id')
             channel_id = like_data.get('channel_id')
             forwarded_message_id = like_data.get('forwarded_message_id')
@@ -94,44 +94,49 @@ class UnlikeModal(ui.Modal, title="🚫 いいねを削除"):
                 ephemeral=True
             )
             
-            # バックグラウンドでDiscordメッセージ削除
+            # Discordメッセージを確実に削除
             if message_id and channel_id:
                 try:
                     likes_channel = interaction.guild.get_channel(int(channel_id))
                     if likes_channel:
+                        deleted_count = 0
+                        
                         # いいねメッセージを削除
                         try:
                             like_message = await likes_channel.fetch_message(int(message_id))
                             await like_message.delete()
-                            logger.info(f"いいねメッセージを削除しました: メッセージID={message_id}")
+                            deleted_count += 1
+                            logger.info(f"✅ いいねメッセージを削除しました: メッセージID={message_id}")
                         except discord.NotFound:
-                            logger.warning(f"いいねメッセージが見つかりません: メッセージID={message_id}")
+                            logger.warning(f"⚠️ いいねメッセージが見つかりません: メッセージID={message_id}")
                         except discord.Forbidden:
-                            logger.warning(f"いいねメッセージの削除権限がありません: メッセージID={message_id}")
+                            logger.error(f"❌ いいねメッセージの削除権限がありません: メッセージID={message_id}")
                         except Exception as e:
-                            logger.error(f"いいねメッセージ削除エラー: {e}")
+                            logger.error(f"❌ いいねメッセージ削除エラー: {e}")
                         
                         # 転送メッセージも削除
                         if forwarded_message_id:
                             try:
                                 forwarded_message = await likes_channel.fetch_message(int(forwarded_message_id))
                                 await forwarded_message.delete()
-                                logger.info(f"転送メッセージを削除しました: メッセージID={forwarded_message_id}")
+                                deleted_count += 1
+                                logger.info(f"✅ 転送メッセージを削除しました: メッセージID={forwarded_message_id}")
                             except discord.NotFound:
-                                logger.warning(f"転送メッセージが見つかりません: メッセージID={forwarded_message_id}")
+                                logger.warning(f"⚠️ 転送メッセージが見つかりません: メッセージID={forwarded_message_id}")
                             except discord.Forbidden:
-                                logger.warning(f"転送メッセージの削除権限がありません: メッセージID={forwarded_message_id}")
+                                logger.error(f"❌ 転送メッセージの削除権限がありません: メッセージID={forwarded_message_id}")
                             except Exception as e:
-                                logger.error(f"転送メッセージ削除エラー: {e}")
+                                logger.error(f"❌ 転送メッセージ削除エラー: {e}")
+                        
+                        logger.info(f"📊 いいね削除結果: {deleted_count}個のメッセージを削除しました")
                     else:
-                        logger.warning(f"likesチャンネルが見つかりません: channel_id={channel_id}")
+                        logger.error(f"❌ likesチャンネルが見つかりません: channel_id={channel_id}")
                 except Exception as e:
-                    logger.error(f"Discordメッセージ削除エラー: {e}")
-                    # Discord削除エラーがあっても、いいね自体は削除されているので続行
+                    logger.error(f"❌ Discordメッセージ削除処理エラー: {e}")
             else:
-                logger.warning(f"メッセージIDまたはチャンネルIDがありません: message_id={message_id}, channel_id={channel_id}")
+                logger.warning(f"⚠️ メッセージIDまたはチャンネルIDがありません: message_id={message_id}, channel_id={channel_id}")
             
-            logger.info(f"いいね削除完了: 投稿ID={post_id}, ユーザーID={user_id}")
+            logger.info(f"✅ いいね削除完了: 投稿ID={post_id}, ユーザーID={user_id}")
             
         except ValueError:
             await interaction.followup.send(
