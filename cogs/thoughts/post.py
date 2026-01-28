@@ -8,9 +8,11 @@ import discord
 from discord import app_commands, ui, Interaction, Embed
 from discord.ext import commands
 
-# ファイルマネージャーをインポート
+# マネージャーをインポート
+import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-from file_manager import FileManager
+from managers.post_manager import PostManager
+from managers.message_ref_manager import MessageRefManager
 from config import get_channel_id, DEFAULT_AVATAR
 
 # ロガーの設定
@@ -19,7 +21,8 @@ logger = logging.getLogger(__name__)
 class Post(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
-        self.file_manager = FileManager()
+        self.post_manager = PostManager()
+        self.message_ref_manager = MessageRefManager()
         logger.info("Post cog が初期化されました")
 
     class VisibilitySelect(ui.Select):
@@ -141,7 +144,7 @@ class Post(commands.Cog):
                         )
                         return
                     
-                    post_id = post_cog.file_manager.save_post(
+                    post_id = post_cog.post_manager.save_post(
                         user_id=str(interaction.user.id),
                         content=message,
                         category=category,
@@ -299,7 +302,7 @@ class Post(commands.Cog):
                     channel = thread
                 
                 # メッセージ参照を保存
-                self.cog.file_manager.save_message_ref(post_id, str(sent_message.id), str(sent_message.channel.id), str(interaction.user.id))
+                self.cog.message_ref_manager.save_message_ref(post_id, str(sent_message.id), str(sent_message.channel.id), str(interaction.user.id))
                 logger.info(f"メッセージ参照を保存しました: 投稿ID={post_id}")
                 
                 # 公開投稿の場合のみ完了メッセージを送信（非公開は既に送信済み）
