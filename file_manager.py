@@ -273,30 +273,36 @@ class FileManager:
             return False
     
     def get_replies_by_post_id(self, post_id: int) -> List[Dict[str, Any]]:
-        """投稿IDから全リプライを取得"""
+        """投稿IDから全リプライを取得（新しい仕組み）"""
         replies = []
         
         for filename in os.listdir(self.replies_dir):
-            if filename.startswith(f'{post_id}_') and filename.endswith('.json'):
+            if filename.startswith('reply_') and filename.endswith('.json'):
                 try:
                     with open(os.path.join(self.replies_dir, filename), 'r', encoding='utf-8') as f:
                         reply_data = json.load(f)
-                        replies.append(reply_data)
+                        
+                        if reply_data.get('post_id') == post_id:
+                            replies.append(reply_data)
                 except (json.JSONDecodeError, FileNotFoundError):
                     continue
         
         return replies
     
     def delete_replies_by_post_id(self, post_id: int) -> int:
-        """投稿IDから全リプライを削除"""
+        """投稿IDから全リプライを削除（新しい仕組み）"""
         deleted_count = 0
         
         for filename in os.listdir(self.replies_dir):
-            if filename.startswith(f'{post_id}_') and filename.endswith('.json'):
+            if filename.startswith('reply_') and filename.endswith('.json'):
                 try:
-                    os.remove(os.path.join(self.replies_dir, filename))
-                    deleted_count += 1
-                except FileNotFoundError:
+                    with open(os.path.join(self.replies_dir, filename), 'r', encoding='utf-8') as f:
+                        reply_data = json.load(f)
+                        
+                        if reply_data.get('post_id') == post_id:
+                            os.remove(os.path.join(self.replies_dir, filename))
+                            deleted_count += 1
+                except (json.JSONDecodeError, FileNotFoundError):
                     continue
         
         return deleted_count
