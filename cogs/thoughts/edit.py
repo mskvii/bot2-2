@@ -72,7 +72,7 @@ class EditSelectView(ui.View):
     """編集する投稿を選択するビュー"""
     
     def __init__(self, items: List[Dict[str, Any]], cog: 'Edit'):
-        super().__init__(timeout=300)
+        super().__init__(timeout=None)
         self.items = items
         self.cog = cog
         
@@ -119,7 +119,7 @@ class PostEditModal(ui.Modal, title="投稿を編集"):
     """投稿編集用モーダル"""
     
     def __init__(self, post_data: Dict[str, Any], cog: 'Edit'):
-        super().__init__(timeout=300)
+        super().__init__(timeout=None)
         self.post_data = post_data
         self.cog = cog
         

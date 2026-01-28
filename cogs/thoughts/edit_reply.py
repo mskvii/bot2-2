@@ -74,7 +74,7 @@ class ReplySelectView(ui.View):
     """リプライ選択ビュー"""
     
     def __init__(self, replies, cog):
-        super().__init__(timeout=300)
+        super().__init__(timeout=None)
         self.replies = replies
         self.cog = cog
         
@@ -120,7 +120,7 @@ class ReplyEditModal(ui.Modal, title="💬 リプライを編集"):
     """リプライ編集用モーダル"""
     
     def __init__(self, reply_data, cog):
-        super().__init__(timeout=300)
+        super().__init__(timeout=None)
         self.cog = cog
         self.reply_data = reply_data
         
