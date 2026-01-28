@@ -41,8 +41,8 @@ jobs:
     
     - name: Setup data directory
       run: |
-        mkdir -p logs temp backups data/posts data/replies data/likes
-        chmod 755 logs temp backups data data/posts data/replies data/likes
+        mkdir -p logs temp data/posts data/replies data/likes
+        chmod 755 logs temp data data/posts data/replies data/likes
     
     - name: Preserve existing data
       run: |
@@ -189,18 +189,7 @@ jobs:
           sleep 10
         done
     
-    - name: Skip automatic backup
-      run: |
-        echo "ℹ️ 30分ごとの自動バックアップをスキップします"
-        echo "📊 データはGitHub同期で保護されています"
-        if [ -d "data" ]; then
-          echo "✅ データディレクトリサイズ: $(du -sh data | cut -f1)"
-          echo "📊 投稿数: $(find data/posts -name "*.json" | wc -l)"
-        else
-          echo "⚠️ データディレクトリが存在しません"
-        fi
-    
-    - name: Commit database changes
+    - name: Show logs
       if: always()  # ボットがクラッシュしても必ず実行
       run: |
         git config --local user.email "action@github.com"
@@ -296,12 +285,4 @@ jobs:
           echo "📊 いいね数: $(find data/likes -name "*.json" | wc -l)"
           echo "=== 最近の投稿 ==="
           find data/posts -name "*.json" -exec ls -lt {} + | head -5 || echo "投稿データが取得できません"
-        fi
-        
-        if [ -d "backups" ]; then
-          echo "=== バックアップ情報 ==="
-          echo "📁 バックアップファイル一覧:"
-          ls -la backups/ 2>/dev/null || echo "バックアップディレクトリがありません"
-          BACKUP_COUNT=$(find backups -name "*.json" 2>/dev/null | wc -l)
-          echo "📊 バックアップ数: $BACKUP_COUNT"
         fi
