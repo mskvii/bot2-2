@@ -42,6 +42,7 @@ class Search(commands.Cog):
         self.reply_manager = ReplyManager()
         self.like_manager = LikeManager()
         self.message_ref_manager = MessageRefManager()
+        self.action_manager = ActionManager()
         logger.info("Search cog が初期化されました")
     
     def _search_posts(
@@ -132,6 +133,55 @@ class Search(commands.Cog):
         except Exception as e:
             logger.error(f"検索中にエラーが発生しました: {e}")
             return []
+    
+    def _create_post_embed(self, post: PostData, title: str) -> Embed:
+        """投稿Embedを作成"""
+        embed = Embed(
+            title=title,
+            color=discord.Color.blue()
+        )
+        
+        # 投稿者情報
+        if post['is_anonymous']:
+            author = "匿名"
+        else:
+            author = post['display_name'] or "名無し"
+        
+        embed.add_field(name="👤 投稿者", value=author, inline=True)
+        embed.add_field(name="📁 カテゴリー", value=post['category'] or '未分類', inline=True)
+        
+        # 投稿日時をフォーマット（JSTタイムゾーン）
+        if post['created_at']:
+            try:
+                # ISO形式からdatetimeオブジェクトに変換
+                from datetime import datetime, timedelta, timezone
+                if 'T' in post['created_at']:
+                    dt = datetime.fromisoformat(post['created_at'].replace('Z', '+00:00'))
+                    # タイムゾーン情報がある場合はJSTに変換、ない場合はJSTとして扱う
+                    if dt.tzinfo is None:
+                        # タイムゾーン情報がない場合はJSTとして扱う
+                        jst_dt = dt.replace(tzinfo=timezone(timedelta(hours=9)))
+                    else:
+                        # UTCからJSTに変換
+                        jst_dt = dt.astimezone(timezone(timedelta(hours=9)))
+                    created_at_str = jst_dt.strftime('%Y-%m-%d %H:%M:%S')
+                else:
+                    created_at_str = post['created_at']
+                embed.add_field(name="📅 投稿日時", value=created_at_str, inline=True)
+            except Exception as e:
+                logger.warning(f"日時フォーマットエラー: {e}")
+                embed.add_field(name="📅 投稿日時", value=post['created_at'] or '不明', inline=True)
+        
+        # 投稿内容
+        content = post['content']
+        if len(content) > 500:
+            content = content[:500] + "..."
+        embed.description = content
+        
+        # 投稿ID
+        embed.set_footer(text=f"投稿ID: {post['id']}")
+        
+        return embed
     
     async def _create_embeds(self, interaction: Interaction, posts: List[PostData], keyword: str, search_type: str = 'posts') -> List[Embed]:
         """検索結果のEmbedを作成します"""
