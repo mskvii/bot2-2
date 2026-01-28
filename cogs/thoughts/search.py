@@ -42,6 +42,7 @@ class Search(commands.Cog):
         self.reply_manager = ReplyManager()
         self.like_manager = LikeManager()
         self.message_ref_manager = MessageRefManager()
+        self.action_manager = ActionManager()
         logger.info("Search cog が初期化されました")
     
     def _search_posts(
@@ -320,7 +321,7 @@ class SearchView(ui.View):
             logger.info(f"ランダム選択された投稿: ID={post['id']}")
             
             # アクションを記録
-            self.search_cog.action_manager.save_action_record('lucky', str(interaction.user.id), str(post['id']), {
+            self.action_manager.save_action_record('lucky', str(interaction.user.id), str(post['id']), {
                 'post_content': post['content'][:100],
                 'category': post['category']
             })
