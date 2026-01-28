@@ -6,10 +6,11 @@ import logging
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 
-# ファイルマネージャーをインポート
+# マネージャーをインポート
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-from file_manager import FileManager
+from managers.post_manager import PostManager
+from managers.reply_manager import ReplyManager
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +19,8 @@ class Edit(commands.Cog):
     
     def __init__(self, bot):
         self.bot = bot
-        self.file_manager = FileManager()
+        self.post_manager = PostManager()
+        self.reply_manager = ReplyManager()
     
     @app_commands.command(name='edit', description='📝 投稿を編集')
     async def edit(self, interaction: discord.Interaction):
@@ -28,7 +30,7 @@ class Edit(commands.Cog):
             await interaction.response.defer(ephemeral=True)
             
             # ユーザーの投稿を取得
-            posts = self.file_manager.search_posts(user_id=str(interaction.user.id))
+            posts = self.post_manager.search_posts(user_id=str(interaction.user.id))
             
             if not posts:
                 await interaction.followup.send("編集できる投稿がありません。", ephemeral=True)
@@ -38,7 +40,9 @@ class Edit(commands.Cog):
             items_list = []
             for post in posts[:25]:  # 最大25件
                 # メッセージ参照を取得
-                message_ref_data = self.file_manager.get_message_ref(post['id'])
+                message_ref_data = None  # 仮実装
+                # TODO: MessageRefManagerを追加して修正
+                # message_ref_data = self.message_ref_manager.get_message_ref(post['id'])
                 if message_ref_data:
                     message_id = message_ref_data.get('message_id')
                     channel_id = message_ref_data.get('channel_id')
@@ -166,8 +170,8 @@ class PostEditModal(ui.Modal, title="投稿を編集"):
             # 公開設定を処理（現在の設定を維持）
             is_public = not self.post_data.get('is_private', False)
             
-            # file_managerを使って投稿を更新
-            success = self.cog.file_manager.update_post(
+            # post_managerを使って投稿を更新
+            success = self.cog.post_manager.update_post(
                 post_id=self.post_data['id'],
                 content=new_content,
                 category=new_category,

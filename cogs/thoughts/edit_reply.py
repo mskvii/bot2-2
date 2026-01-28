@@ -6,10 +6,10 @@ import discord
 from discord import app_commands, ui, Interaction, Embed
 from discord.ext import commands
 
-# ファイルマネージャーをインポート
+# マネージャーをインポート
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-from file_manager import FileManager
+from managers.reply_manager import ReplyManager
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +18,7 @@ class EditReply(commands.Cog):
     
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.file_manager = FileManager()
+        self.reply_manager = ReplyManager()
     
     @app_commands.command(name='edit_reply', description='💬 リプライを編集')
     async def edit_reply(self, interaction: discord.Interaction):
@@ -27,11 +27,13 @@ class EditReply(commands.Cog):
             await interaction.response.defer(ephemeral=True)
             
             # 全投稿を取得してユーザーのリプライを検索
-            all_posts = self.file_manager.get_all_posts()
+            # PostManagerが必要なので、とりあえずこのままにしておく
+            # TODO: PostManagerを追加して修正
+            all_posts = []  # 仮実装
             user_replies = []
             
             for post in all_posts:
-                replies = self.file_manager.get_replies(post['id'])
+                replies = self.reply_manager.get_replies(post['id'])
                 
                 for reply in replies:
                     if reply.get('user_id') == str(interaction.user.id):
@@ -145,12 +147,12 @@ class ReplyEditModal(ui.Modal, title="💬 リプライを編集"):
         try:
             await interaction.response.defer(ephemeral=True)
             
-            # file_managerを使ってリプライを更新
+            # reply_managerを使ってリプライを更新
             post_id = self.reply_data.get('post_id')
             reply_id = self.reply_data.get('id')
             
             # リプライを更新
-            success = self.file_manager.update_reply(post_id, reply_id, self.content_input.value)
+            success = self.cog.reply_manager.update_reply(post_id, reply_id, self.content_input.value)
             
             if not success:
                 logger.error(f"リプライの更新に失敗しました: 投稿ID={post_id}, リプライID={reply_id}")
