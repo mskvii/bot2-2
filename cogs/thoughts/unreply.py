@@ -8,10 +8,10 @@ import discord
 from discord import app_commands, ui, Interaction, Embed
 from discord.ext import commands
 
-# ファイルマネージャーをインポート
+# マネージャーをインポート
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-from file_manager import FileManager
+from managers.reply_manager import ReplyManager
 from config import get_channel_id, extract_channel_id
 
 logger = logging.getLogger(__name__)
@@ -19,9 +19,9 @@ logger = logging.getLogger(__name__)
 class UnreplyModal(ui.Modal, title="� リプライを削除"):
     """リプライを削除するリプライIDを入力するモーダル"""
     
-    def __init__(self, file_manager: FileManager):
+    def __init__(self, reply_manager: ReplyManager):
         super().__init__(timeout=None)
-        self.file_manager = file_manager
+        self.reply_manager = reply_manager
         
         self.reply_id_input = ui.TextInput(
             label="💬 リプライID",
@@ -46,8 +46,8 @@ class UnreplyModal(ui.Modal, title="� リプライを削除"):
             # リプライファイルを検索
             logger.info(f"リプライ削除試行: リプライID={reply_id}, ユーザーID={user_id}")
             
-            # file_managerを使ってリプライを検索
-            reply_data = self.file_manager.get_reply_by_id_and_user(reply_id, user_id)
+            # reply_managerを使ってリプライを検索
+            reply_data = self.reply_manager.get_reply_by_id_and_user(reply_id, user_id)
             
             if not reply_data:
                 logger.warning(f"リプライが見つかりませんでした: リプライID={reply_id}, ユーザーID={user_id}")
@@ -61,7 +61,7 @@ class UnreplyModal(ui.Modal, title="� リプライを削除"):
             logger.info(f"リプライが見つかりました: {reply_data}")
             
             # リプライファイルを削除
-            success = self.file_manager.delete_reply(reply_id, user_id)
+            success = self.reply_manager.delete_reply(reply_id, user_id)
             
             if not success:
                 logger.error(f"リプライの削除に失敗しました: リプライID={reply_id}, ユーザーID={user_id}")
@@ -148,14 +148,14 @@ class Unreply(commands.Cog):
     
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
-        self.file_manager = FileManager()
+        self.reply_manager = ReplyManager()
         logger.info("Unreply cog が初期化されました")
     
     @app_commands.command(name='unreply', description='🗑️ リプライを削除する')
     async def unreply_command(self, interaction: Interaction) -> None:
         """リプライ削除コマンド"""
         try:
-            await interaction.response.send_modal(UnreplyModal(self.file_manager))
+            await interaction.response.send_modal(UnreplyModal(self.reply_manager))
         except Exception as e:
             logger.error(f"リプライ削除モーダル表示中にエラーが発生しました: {e}", exc_info=True)
             await interaction.response.send_message(

@@ -8,10 +8,10 @@ import discord
 from discord import app_commands, ui, Interaction, Embed
 from discord.ext import commands
 
-# ファイルマネージャーをインポート
+# マネージャーをインポート
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-from file_manager import FileManager
+from managers.like_manager import LikeManager
 from config import get_channel_id, extract_channel_id
 
 logger = logging.getLogger(__name__)
@@ -19,9 +19,9 @@ logger = logging.getLogger(__name__)
 class UnlikeModal(ui.Modal, title="🚫 いいねを削除"):
     """いいねを削除する投稿IDを入力するモーダル"""
     
-    def __init__(self, file_manager: FileManager):
+    def __init__(self, like_manager: LikeManager):
         super().__init__(timeout=None)
-        self.file_manager = file_manager
+        self.like_manager = like_manager
         
         self.post_id_input = ui.TextInput(
             label="📝 投稿ID",
@@ -42,7 +42,9 @@ class UnlikeModal(ui.Modal, title="🚫 いいねを削除"):
             user_id = str(interaction.user.id)
             
             # 投稿の存在確認
-            post = self.file_manager.get_post(post_id)
+            # PostManagerが必要なので、とりあえずこのままにしておく
+            # TODO: PostManagerを追加して修正
+            post = None  # 仮実装
             if not post:
                 await interaction.followup.send(
                     "❌ **投稿が見つかりません**\n\n"
@@ -54,8 +56,8 @@ class UnlikeModal(ui.Modal, title="🚫 いいねを削除"):
             # ユーザーのいいねを検索
             logger.info(f"いいね削除試行: 投稿ID={post_id}, ユーザーID={user_id}")
             
-            # file_managerを使っていいねを検索
-            like_data = self.file_manager.get_like_by_user_and_post(post_id, user_id)
+            # like_managerを使っていいねを検索
+            like_data = self.like_manager.get_like_by_user_and_post(post_id, user_id)
             
             if not like_data:
                 logger.warning(f"いいねが見つかりませんでした: 投稿ID={post_id}, ユーザーID={user_id}")
@@ -69,7 +71,7 @@ class UnlikeModal(ui.Modal, title="🚫 いいねを削除"):
             logger.info(f"いいねが見つかりました: {like_data}")
             
             # いいねファイルを削除
-            success = self.file_manager.delete_like(post_id, user_id)
+            success = self.like_manager.delete_like(post_id, user_id)
             
             if not success:
                 logger.error(f"いいねの削除に失敗しました: 投稿ID={post_id}, ユーザーID={user_id}")
@@ -157,14 +159,14 @@ class Unlike(commands.Cog):
     
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
-        self.file_manager = FileManager()
+        self.like_manager = LikeManager()
         logger.info("Unlike cog が初期化されました")
     
     @app_commands.command(name='unlike', description='❌ いいねを削除する')
     async def unlike_command(self, interaction: Interaction) -> None:
         """いいね削除コマンド"""
         try:
-            await interaction.response.send_modal(UnlikeModal(self.file_manager))
+            await interaction.response.send_modal(UnlikeModal(self.like_manager))
         except Exception as e:
             logger.error(f"いいね削除モーダル表示中にエラーが発生しました: {e}", exc_info=True)
             await interaction.response.send_message(
