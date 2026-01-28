@@ -58,7 +58,17 @@ class LikeModal(ui.Modal, title="❤️ いいねする投稿"):
                 display_name=interaction.user.display_name
             )
             
-            # いいねチャンネルに転送
+            # まず成功メッセージを送信（速度改善）
+            await interaction.followup.send(
+                f"✅ いいねしました！\n\n"
+                f"投稿ID: {post_id}\n"
+                f"いいねID: {like_id}\n"
+                f"投稿者: {post.get('display_name', '名無し')}\n"
+                f"内容: {post.get('content', '')[:100]}{'...' if len(post.get('content', '')) > 100 else ''}",
+                ephemeral=True
+            )
+            
+            # Discordメッセージ処理をバックグラウンドで実行
             try:
                 likes_channel_id = extract_channel_id(get_channel_id('likes'))
                 likes_channel = interaction.guild.get_channel(likes_channel_id)
@@ -85,6 +95,7 @@ class LikeModal(ui.Modal, title="❤️ いいねする投稿"):
                                     
                                     # いいねファイルに両方のメッセージIDを保存
                                     self.file_manager.update_like_message_id(like_id, str(like_message.id), str(likes_channel.id), str(forwarded_message.id))
+                                    logger.info(f"✅ いいねDiscordメッセージ処理完了: like_id={like_id}")
                                 else:
                                     logger.warning(f"元のチャンネルが見つかりません: channel_id={channel_id}")
                             except discord.NotFound:
@@ -103,17 +114,7 @@ class LikeModal(ui.Modal, title="❤️ いいねする投稿"):
                 logger.error(f"いいねチャンネル転送エラー: {e}")
                 # Discord転送エラーがあっても、いいね自体は保存されているので続行
             
-            # 専用チャンネルへの転送のみで完了
-            await interaction.followup.send(
-                f"✅ いいねしました！\n\n"
-                f"投稿ID: {post_id}\n"
-                f"いいねID: {like_id}\n"
-                f"投稿者: {post.get('display_name', '名無し')}\n"
-                f"内容: {post.get('content', '')[:100]}{'...' if len(post.get('content', '')) > 100 else ''}",
-                ephemeral=True
-            )
-            
-            logger.info(f"いいねが作成されました: 投稿ID={post_id}, いいねID={like_id}, ユーザーID={interaction.user.id}")
+            logger.info(f"✅ いいねが作成されました: 投稿ID={post_id}, いいねID={like_id}, ユーザーID={interaction.user.id}")
             
         except ValueError:
             await interaction.followup.send(

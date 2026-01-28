@@ -67,7 +67,17 @@ class ReplyModal(ui.Modal, title="💬 リプライする投稿"):
                 display_name=interaction.user.display_name
             )
             
-            # リプライチャンネルに転送
+            # まず成功メッセージを送信（速度改善）
+            await interaction.followup.send(
+                f"✅ リプライしました！\n\n"
+                f"投稿ID: {post_id}\n"
+                f"リプライID: {reply_id}\n"
+                f"投稿者: {parent_post.get('display_name', '名無し')}\n"
+                f"リプライ内容: {reply_content[:100]}{'...' if len(reply_content) > 100 else ''}",
+                ephemeral=True
+            )
+            
+            # Discordメッセージ処理をバックグラウンドで実行
             try:
                 replies_channel_id = extract_channel_id(get_channel_id('replies'))
                 replies_channel = interaction.guild.get_channel(replies_channel_id)
@@ -101,6 +111,7 @@ class ReplyModal(ui.Modal, title="💬 リプライする投稿"):
                                     
                                     # リプライファイルに両方のメッセージIDを保存
                                     self.file_manager.update_reply_message_id(reply_id, str(reply_message.id), str(replies_channel.id), str(forwarded_message.id))
+                                    logger.info(f"✅ リプライDiscordメッセージ処理完了: reply_id={reply_id}")
                                 else:
                                     logger.warning(f"元のチャンネルが見つかりません: channel_id={channel_id}")
                             except discord.NotFound:
@@ -119,17 +130,7 @@ class ReplyModal(ui.Modal, title="💬 リプライする投稿"):
                 logger.error(f"リプライチャンネル転送エラー: {e}")
                 # Discord転送エラーがあっても、リプライ自体は保存されているので続行
             
-            # 専用チャンネルへの転送のみで完了
-            await interaction.followup.send(
-                f"✅ リプライしました！\n\n"
-                f"投稿ID: {post_id}\n"
-                f"リプライID: {reply_id}\n"
-                f"投稿者: {parent_post.get('display_name', '名無し')}\n"
-                f"リプライ内容: {reply_content[:100]}{'...' if len(reply_content) > 100 else ''}",
-                ephemeral=True
-            )
-            
-            logger.info(f"リプライが作成されました: 投稿ID={post_id}, リプライID={reply_id}, ユーザーID={interaction.user.id}")
+            logger.info(f"✅ リプライが作成されました: 投稿ID={post_id}, リプライID={reply_id}, ユーザーID={interaction.user.id}")
             
         except ValueError:
             await interaction.followup.send(
