@@ -42,7 +42,6 @@ class Search(commands.Cog):
         self.reply_manager = ReplyManager()
         self.like_manager = LikeManager()
         self.message_ref_manager = MessageRefManager()
-        self.action_manager = ActionManager()
         logger.info("Search cog が初期化されました")
     
     def _search_posts(
@@ -257,26 +256,36 @@ class SearchView(ui.View):
     """Google風の検索ビュー"""
     
     def __init__(self, search_cog: Search):
-        super().__init__(timeout=None)
-        self.search_cog = search_cog
-        
-        # 検索ボタン
-        search_button = ui.Button(
-            label="Disgle検索",
-            style=discord.ButtonStyle.primary,
-            emoji="🔍"
-        )
-        search_button.callback = self.open_search_modal
-        self.add_item(search_button)
-        
-        # ラッキーボタン
-        lucky_button = ui.Button(
-            label="I'm Feeling Lucky",
-            style=discord.ButtonStyle.secondary,
-            emoji="🎲"
-        )
-        lucky_button.callback = self.feeling_lucky
-        self.add_item(lucky_button)
+        try:
+            super().__init__(timeout=None)
+            self.search_cog = search_cog
+            
+            # 検索ボタン
+            search_button = ui.Button(
+                label="Disgle検索",
+                style=discord.ButtonStyle.primary,
+                emoji="🔍"
+            )
+            search_button.callback = self.open_search_modal
+            self.add_item(search_button)
+            
+            # ラッキーボタン
+            lucky_button = ui.Button(
+                label="I'm Feeling Lucky",
+                style=discord.ButtonStyle.secondary,
+                emoji="🎲"
+            )
+            lucky_button.callback = self.feeling_lucky
+            self.add_item(lucky_button)
+            
+        except RuntimeError as e:
+            # イベントループがない場合のエラーハンドリング
+            logger.warning(f"SearchView初期化エラー（非同期環境外）: {e}")
+            self.search_cog = search_cog
+            self.initialized = False
+        except Exception as e:
+            logger.error(f"SearchView初期化エラー: {e}")
+            raise
     
     async def open_search_modal(self, interaction: Interaction) -> None:
         """検索モーダルを開く"""
@@ -304,6 +313,14 @@ class SearchView(ui.View):
             logger.info(f"I'm Feeling Lucky開始: user={interaction.user.id}")
             await interaction.response.defer(ephemeral=True)
             
+            # Viewが初期化されていない場合のチェック
+            if hasattr(self, 'initialized') and not self.initialized:
+                await interaction.followup.send(
+                    "🎲 検索機能が初期化されていません。もう一度お試しください。",
+                    ephemeral=True
+                )
+                return
+            
             # ランダムな投稿を取得
             posts = self.search_cog._search_posts(current_user_id=int(interaction.user.id))
             logger.info(f"検索結果: {len(posts)}件")
@@ -321,7 +338,7 @@ class SearchView(ui.View):
             logger.info(f"ランダム選択された投稿: ID={post['id']}")
             
             # アクションを記録
-            self.action_manager.save_action_record('lucky', str(interaction.user.id), str(post['id']), {
+            self.search_cog.action_manager.save_action_record('lucky', str(interaction.user.id), str(post['id']), {
                 'post_content': post['content'][:100],
                 'category': post['category']
             })
@@ -646,14 +663,25 @@ class PostActionView(ui.View):
     """投稿アクションボタンビュー"""
     
     def __init__(self, post: PostData, search_cog: 'Search'):
-        super().__init__(timeout=None)
-        self.post = post
-        self.search_cog = search_cog
-        
-        # 詳細ボタンのみ
-        detail_button = ui.Button(label="📝 詳細", style=discord.ButtonStyle.primary)
-        detail_button.callback = self.show_detail
-        self.add_item(detail_button)
+        try:
+            super().__init__(timeout=None)
+            self.post = post
+            self.search_cog = search_cog
+            
+            # 詳細ボタンのみ
+            detail_button = ui.Button(label="📝 詳細", style=discord.ButtonStyle.primary)
+            detail_button.callback = self.show_detail
+            self.add_item(detail_button)
+            
+        except RuntimeError as e:
+            # イベントループがない場合のエラーハンドリング
+            logger.warning(f"PostActionView初期化エラー（非同期環境外）: {e}")
+            self.post = post
+            self.search_cog = search_cog
+            self.initialized = False
+        except Exception as e:
+            logger.error(f"PostActionView初期化エラー: {e}")
+            raise
     
     async def show_detail(self, interaction: Interaction) -> None:
         """投稿詳細を表示"""
