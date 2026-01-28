@@ -28,7 +28,7 @@ class UnreplyModal(ui.Modal, title="� リプライを削除"):
             placeholder="削除するリプライのIDを入力...",
             required=True,
             style=discord.TextStyle.short,
-            max_length=10
+            max_length=252
         )
         
         self.add_item(self.reply_id_input)

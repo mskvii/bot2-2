@@ -28,7 +28,7 @@ class ReplyModal(ui.Modal, title="💬 リプライする投稿"):
             placeholder="リプライする投稿のIDを入力...",
             required=True,
             style=discord.TextStyle.short,
-            max_length=10
+            max_length=252
         )
         
         self.reply_input = ui.TextInput(

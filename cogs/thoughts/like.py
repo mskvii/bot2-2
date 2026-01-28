@@ -28,7 +28,7 @@ class LikeModal(ui.Modal, title="❤️ いいねする投稿"):
             placeholder="いいねする投稿のIDを入力...",
             required=True,
             style=discord.TextStyle.short,
-            max_length=10
+            max_length=252
         )
         self.add_item(self.post_id_input)
     
