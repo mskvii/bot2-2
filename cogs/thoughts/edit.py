@@ -184,7 +184,14 @@ class PostEditModal(ui.Modal, title="投稿を編集"):
             
             logger.info(f"投稿を更新しました: 投稿ID={self.post_data['id']}")
             
-            # Discordメッセージも更新
+            # まず成功メッセージを送信（速度改善）
+            await interaction.followup.send(
+                f"✅ **投稿を編集しました！**\n\n"
+                f"投稿ID: {self.post_data['id']} を更新しました。",
+                ephemeral=True
+            )
+            
+            # Discordメッセージをバックグラウンドで更新
             if self.post_data.get('message_id') and self.post_data.get('channel_id'):
                 try:
                     channel = interaction.guild.get_channel(int(self.post_data['channel_id']))
@@ -208,14 +215,9 @@ class PostEditModal(ui.Modal, title="投稿を編集"):
                             embed.set_footer(text=" | ".join(footer_parts))
                             
                             await message.edit(embed=embed)
+                            logger.info(f"✅ Discordメッセージ更新完了: 投稿ID={self.post_data['id']}")
                 except Exception as e:
                     logger.error(f"Discordメッセージ更新中にエラー: {e}")
-            
-            await interaction.followup.send(
-                f"✅ **投稿を編集しました！**\n\n"
-                f"投稿ID: {self.post_data['id']} を更新しました。",
-                ephemeral=True
-            )
             
             # GitHubに保存する処理
             from .github_sync import sync_to_github
