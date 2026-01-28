@@ -20,7 +20,7 @@ class UnlikeModal(ui.Modal, title="🚫 いいねを削除"):
     """いいねを削除する投稿IDを入力するモーダル"""
     
     def __init__(self, file_manager: FileManager):
-        super().__init__(timeout=300)
+        super().__init__(timeout=None)
         self.file_manager = file_manager
         
         self.post_id_input = ui.TextInput(

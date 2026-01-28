@@ -20,7 +20,7 @@ class ReplyModal(ui.Modal, title="💬 リプライする投稿"):
     """リプライする投稿IDと内容を入力するモーダル"""
     
     def __init__(self, file_manager: FileManager):
-        super().__init__(timeout=300)
+        super().__init__(timeout=None)
         self.file_manager = file_manager
         
         self.post_id_input = ui.TextInput(

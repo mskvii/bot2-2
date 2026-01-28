@@ -63,7 +63,7 @@ class DeleteSelectView(ui.View):
     """削除する投稿を選択するビュー"""
     
     def __init__(self, posts: List[Dict[str, Any]], cog: 'Delete'):
-        super().__init__(timeout=300)
+        super().__init__(timeout=None)
         self.posts = posts
         self.cog = cog
         
@@ -105,7 +105,7 @@ class DeleteConfirmModal(ui.Modal, title="🗑️ 投稿削除確認"):
     """投稿削除確認用モーダル"""
     
     def __init__(self, post_data: Dict[str, Any], cog: 'Delete'):
-        super().__init__(timeout=300)
+        super().__init__(timeout=None)
         self.cog = cog
         self.post_data = post_data
         

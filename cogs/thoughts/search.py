@@ -248,7 +248,7 @@ class SearchView(ui.View):
     """Google風の検索ビュー"""
     
     def __init__(self, search_cog: Search):
-        super().__init__(timeout=300)
+        super().__init__(timeout=None)
         self.search_cog = search_cog
         self.file_manager = search_cog.file_manager
         
@@ -396,7 +396,7 @@ class SearchModal(ui.Modal, title="Disgle検索"):
     """Disgle検索用モーダル"""
     
     def __init__(self, search_cog: Search):
-        super().__init__(timeout=300)
+        super().__init__(timeout=None)
         self.search_cog = search_cog
         
         self.search_input = ui.TextInput(
@@ -486,7 +486,7 @@ class PaginationView(ui.View):
     """ページネーションビュー"""
     
     def __init__(self, embeds: List[Embed], posts: List[PostData], search_cog: Search):
-        super().__init__(timeout=300)
+        super().__init__(timeout=None)
         self.embeds = embeds
         self.posts = posts
         self.search_cog = search_cog
@@ -638,7 +638,7 @@ class PostActionView(ui.View):
     """投稿アクションボタンビュー"""
     
     def __init__(self, post: PostData, search_cog: 'Search'):
-        super().__init__(timeout=300)
+        super().__init__(timeout=None)
         self.post = post
         self.search_cog = search_cog
         
@@ -728,7 +728,7 @@ class ReplyModal(ui.Modal, title="💬 リプライ"):
     """リプライ用モーダル"""
     
     def __init__(self, post: PostData, search_cog: Search):
-        super().__init__(timeout=300)
+        super().__init__(timeout=None)
         self.post = post
         self.search_cog = search_cog
         

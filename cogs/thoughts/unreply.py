@@ -20,7 +20,7 @@ class UnreplyModal(ui.Modal, title="� リプライを削除"):
     """リプライを削除するリプライIDを入力するモーダル"""
     
     def __init__(self, file_manager: FileManager):
-        super().__init__(timeout=300)
+        super().__init__(timeout=None)
         self.file_manager = file_manager
         
         self.reply_id_input = ui.TextInput(
