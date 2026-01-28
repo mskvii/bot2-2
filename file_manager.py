@@ -7,6 +7,9 @@ from datetime import datetime
 # データ保存を制御する環境変数
 SAVE_DATA = os.getenv('SAVE_DATA', 'true').lower() == 'true'
 
+# 強制的にデータ保存を有効化（テスト用）
+SAVE_DATA = True
+
 logger = logging.getLogger(__name__)
 
 class FileManager:
