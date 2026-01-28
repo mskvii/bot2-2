@@ -218,8 +218,8 @@ jobs:
       run: |
         if [ -f "logs/bot.log" ]; then
           echo "=== 最終ログ ==="
-          echo "=== DEBUGログを含む全ログ ==="
-          grep -E "(DEBUG|ERROR|WARNING)" logs/bot.log || echo "DEBUGログが見つかりません"
+          echo "=== ERROR/WARNINGログを含む全ログ ==="
+          grep -E "(ERROR|WARNING)" logs/bot.log || echo "ERROR/WARNINGログが見つかりません"
           echo "=== 最終50行 ==="
           tail -n 50 logs/bot.log
         fi
