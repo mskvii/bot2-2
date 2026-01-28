@@ -236,7 +236,7 @@ jobs:
               break
             else
               echo "⚠️ コミット失敗、リトライします (試行 $i/3)"
-              git pull --rebase origin main || true
+              git pull origin main || true
               sleep 3
               # 最終手段：1つのクリーンなコミットにまとめる
               if [ $i -eq 3 ]; then
@@ -254,7 +254,7 @@ jobs:
               break
             else
               echo "⚠️ プッシュ失敗、リトライします (試行 $i/3)"
-              git pull --rebase origin main || true
+              git pull origin main || true
               sleep 3
               # 最終手段：1回のみの強制プッシュ
               if [ $i -eq 3 ]; then
