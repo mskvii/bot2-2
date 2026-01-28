@@ -126,14 +126,15 @@ class FileManager:
             return False
     
     def get_like_by_user_and_post(self, post_id: int, user_id: str) -> Optional[Dict[str, Any]]:
-        """ユーザーといいねされた投稿IDからいいねデータを取得"""
+        """ユーザーといいねされた投稿IDからいいねデータを取得（新しい仕組み）"""
         for filename in os.listdir(self.likes_dir):
-            if filename.startswith(f'{post_id}_') and filename.endswith('.json'):
+            if filename.startswith('like_') and filename.endswith('.json'):
                 try:
                     with open(os.path.join(self.likes_dir, filename), 'r', encoding='utf-8') as f:
                         like_data = json.load(f)
                     
-                    if like_data.get('user_id') == user_id:
+                    if (like_data.get('post_id') == post_id and 
+                        like_data.get('user_id') == user_id):
                         return like_data
                 except (json.JSONDecodeError, FileNotFoundError):
                     continue
@@ -145,7 +146,7 @@ class FileManager:
         if not like_data:
             return False
         
-        filename = os.path.join(self.likes_dir, f"{post_id}_{like_data['id']}.json")
+        filename = os.path.join(self.likes_dir, f"like_{like_data['id']}.json")
         try:
             os.remove(filename)
             return True
@@ -153,14 +154,14 @@ class FileManager:
             return False
     
     def get_reply_by_id_and_user(self, reply_id: str, user_id: str) -> Optional[Dict[str, Any]]:
-        """リプライIDとユーザーIDからリプライデータを取得"""
+        """リプライIDとユーザーIDからリプライデータを取得（新しい仕組み）"""
         for filename in os.listdir(self.replies_dir):
-            if filename.endswith('.json'):
+            if filename.startswith('reply_') and filename.endswith('.json'):
                 try:
                     with open(os.path.join(self.replies_dir, filename), 'r', encoding='utf-8') as f:
                         reply_data = json.load(f)
                     
-                    if (reply_data.get('id') == reply_id and 
+                    if (str(reply_data.get('id')) == str(reply_id) and 
                         reply_data.get('user_id') == user_id):
                         return reply_data
                 except (json.JSONDecodeError, FileNotFoundError):
@@ -173,39 +174,37 @@ class FileManager:
         if not reply_data:
             return False
         
-        # ファイル名を特定して削除
-        for filename in os.listdir(self.replies_dir):
-            if filename.endswith('.json'):
-                try:
-                    with open(os.path.join(self.replies_dir, filename), 'r', encoding='utf-8') as f:
-                        data = json.load(f)
-                    
-                    if (data.get('id') == reply_id and 
-                        data.get('user_id') == user_id):
-                        os.remove(os.path.join(self.replies_dir, filename))
-                        return True
-                except (json.JSONDecodeError, FileNotFoundError):
-                    continue
-        return False
+        # グローバルIDでファイル名を特定して削除
+        filename = os.path.join(self.replies_dir, f"reply_{reply_id}.json")
+        try:
+            os.remove(filename)
+            return True
+        except FileNotFoundError:
+            return False
     
     def update_reply(self, post_id: int, reply_id: int, content: str) -> bool:
-        """リプライを更新"""
-        for filename in os.listdir(self.replies_dir):
-            if filename.startswith(f'{post_id}_') and filename.endswith('.json'):
-                try:
-                    with open(os.path.join(self.replies_dir, filename), 'r', encoding='utf-8') as f:
-                        reply_data = json.load(f)
-                    
-                    if reply_data.get('id') == reply_id:
-                        reply_data['content'] = content
-                        reply_data['updated_at'] = datetime.now().isoformat()
-                        
-                        with open(os.path.join(self.replies_dir, filename), 'w', encoding='utf-8') as f:
-                            json.dump(reply_data, f, ensure_ascii=False, indent=2)
-                        return True
-                except (json.JSONDecodeError, FileNotFoundError):
-                    continue
-        return False
+        """リプライを更新（新しい仕組み）"""
+        filename = os.path.join(self.replies_dir, f"reply_{reply_id}.json")
+        
+        if not os.path.exists(filename):
+            return False
+        
+        try:
+            with open(filename, 'r', encoding='utf-8') as f:
+                reply_data = json.load(f)
+            
+            if reply_data.get('post_id') != post_id:
+                return False
+            
+            reply_data['content'] = content
+            reply_data['updated_at'] = datetime.now().isoformat()
+            
+            with open(filename, 'w', encoding='utf-8') as f:
+                json.dump(reply_data, f, ensure_ascii=False, indent=2)
+            
+            return True
+        except (json.JSONDecodeError, FileNotFoundError):
+            return False
     
     def save_action_record(self, action_type: str, user_id: str, target_id: str, 
                           action_data: Dict[str, Any] = None) -> None:
@@ -365,14 +364,16 @@ class FileManager:
         return reply_id
     
     def get_replies(self, post_id: int) -> List[Dict[str, Any]]:
-        """投稿のリプライを取得"""
+        """投稿のリプライを取得（新しい仕組み）"""
         replies = []
         
         for filename in sorted(os.listdir(self.replies_dir)):
-            if filename.startswith(f"{post_id}_") and filename.endswith('.json'):
+            if filename.startswith('reply_') and filename.endswith('.json'):
                 try:
                     with open(os.path.join(self.replies_dir, filename), 'r', encoding='utf-8') as f:
                         reply = json.load(f)
+                    
+                    if reply.get('post_id') == post_id:
                         replies.append(reply)
                 except (json.JSONDecodeError, FileNotFoundError):
                     continue
