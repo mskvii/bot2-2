@@ -8,10 +8,10 @@ import discord
 from discord import app_commands, ui, Interaction, Embed
 from discord.ext import commands
 
-# ファイルマネージャーをインポート
+# マネージャーをインポート
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-from file_manager import FileManager
+from managers.reply_manager import ReplyManager
 from config import get_channel_id, extract_channel_id
 
 logger = logging.getLogger(__name__)
@@ -19,9 +19,9 @@ logger = logging.getLogger(__name__)
 class ReplyModal(ui.Modal, title="💬 リプライする投稿"):
     """リプライする投稿IDと内容を入力するモーダル"""
     
-    def __init__(self, file_manager: FileManager):
+    def __init__(self, reply_manager: ReplyManager):
         super().__init__(timeout=None)
-        self.file_manager = file_manager
+        self.reply_manager = reply_manager
         
         self.post_id_input = ui.TextInput(
             label="📝 投稿ID",
@@ -60,7 +60,7 @@ class ReplyModal(ui.Modal, title="💬 リプライする投稿"):
                 return
             
             # リプライを保存
-            reply_id = self.file_manager.save_reply(
+            reply_id = self.reply_manager.save_reply(
                 post_id=post_id,
                 user_id=str(interaction.user.id),
                 content=reply_content,
@@ -151,14 +151,14 @@ class Reply(commands.Cog):
     
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
-        self.file_manager = FileManager()
+        self.reply_manager = ReplyManager()
         logger.info("Reply cog が初期化されました")
     
     @app_commands.command(name='reply', description='💬 投稿にリプライする')
     async def reply_command(self, interaction: Interaction) -> None:
         """リプライコマンド"""
         try:
-            await interaction.response.send_modal(ReplyModal(self.file_manager))
+            await interaction.response.send_modal(ReplyModal(self.reply_manager))
         except Exception as e:
             logger.error(f"リプライモーダル表示中にエラーが発生しました: {e}", exc_info=True)
             await interaction.response.send_message(

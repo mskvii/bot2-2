@@ -8,10 +8,10 @@ import discord
 from discord import app_commands, ui, Interaction, Embed
 from discord.ext import commands
 
-# ファイルマネージャーをインポート
+# マネージャーをインポート
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-from file_manager import FileManager
+from managers.like_manager import LikeManager
 from config import get_channel_id, extract_channel_id
 
 logger = logging.getLogger(__name__)
@@ -19,9 +19,9 @@ logger = logging.getLogger(__name__)
 class LikeModal(ui.Modal, title="❤️ いいねする投稿"):
     """いいねする投稿IDを入力するモーダル"""
     
-    def __init__(self, file_manager: FileManager):
+    def __init__(self, like_manager: LikeManager):
         super().__init__(timeout=None)
-        self.file_manager = file_manager
+        self.like_manager = like_manager
         
         self.post_id_input = ui.TextInput(
             label="📝 投稿ID",
@@ -52,7 +52,7 @@ class LikeModal(ui.Modal, title="❤️ いいねする投稿"):
                 return
             
             # いいねを保存
-            like_id = self.file_manager.save_like(
+            like_id = self.like_manager.save_like(
                 post_id=post_id,
                 user_id=str(interaction.user.id),
                 display_name=interaction.user.display_name
@@ -135,14 +135,14 @@ class Like(commands.Cog):
     
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
-        self.file_manager = FileManager()
+        self.like_manager = LikeManager()
         logger.info("Like cog が初期化されました")
     
     @app_commands.command(name='like', description='❤️ 投稿にいいねする')
     async def like_command(self, interaction: Interaction) -> None:
         """いいねコマンド"""
         try:
-            await interaction.response.send_modal(LikeModal(self.file_manager))
+            await interaction.response.send_modal(LikeModal(self.like_manager))
         except Exception as e:
             logger.error(f"いいねモーダル表示中にエラーが発生しました: {e}", exc_info=True)
             await interaction.response.send_message(
