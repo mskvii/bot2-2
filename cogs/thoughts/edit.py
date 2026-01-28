@@ -7,6 +7,9 @@ from typing import Optional, List, Dict, Any
 from datetime import datetime
 
 # マネージャーをインポート
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from managers.post_manager import PostManager
 from managers.reply_manager import ReplyManager
 from managers.message_ref_manager import MessageRefManager
