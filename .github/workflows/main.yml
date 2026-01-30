@@ -131,54 +131,121 @@ jobs:
           fi
         fi
     
-    - name: Run bot
+    - name: Monitor Discord commands
       env:
         DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
-        APPLICATION_ID: ${{ secrets.APPLICATION_ID }}
-        ALLOWED_CHANNEL_IDS: ${{ secrets.ALLOWED_CHANNEL_ID }}
-        DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        CHANNEL_ID: ${{ secrets.CHANNEL_ID }}
       run: |
-        # ボット起動時にデータディレクトリを指定
-        export DATA_DIR="data"
+        echo "🔍 Discordコマンド監視を開始します..."
         
-        # Discordに開始通知
-        curl -X POST \
-          -H "Content-Type: application/json" \
-          -d '{"content": "🤖 ボット起動を開始します... ('$(date +%Y-%m-%d\ %H:%M:%S)')"}' \
-          "$DISCORD_WEBHOOK_URL" || true
+        # 最後に処理したメッセージIDを初期化
+        LAST_MESSAGE_ID=""
         
-        # 既存のプロセスを終了
-        pkill -f "python.*bot.py" || true
+        # 監視ループ（5分間）
+        END_TIME=$(($(date +%s) + 300))
         
-        # ボットを起動
-        mkdir -p logs temp
-        nohup python bot.py > logs/bot.log 2>&1 &
-        BOT_PID=$!
-        echo $BOT_PID > temp/bot.pid
+        while [ $(date +%s) -lt $END_TIME ]; do
+          # Discord APIで最新メッセージを取得
+          MESSAGES=$(curl -s -H "Authorization: Bot $DISCORD_TOKEN" \
+            "https://discord.com/api/channels/$CHANNEL_ID/messages?limit=3" 2>/dev/null)
+          
+          if [ $? -eq 0 ] && [ "$MESSAGES" != "" ]; then
+            # 最新メッセージを解析
+            LATEST_MESSAGE=$(echo "$MESSAGES" | jq -r '.[0].content' 2>/dev/null)
+            LATEST_ID=$(echo "$MESSAGES" | jq -r '.[0].id' 2>/dev/null)
+            
+            # 新しいメッセージかチェック
+            if [ "$LATEST_ID" != "$LAST_MESSAGE_ID" ] && [ "$LATEST_ID" != "null" ]; then
+              echo "📨 新しいメッセージ: $LATEST_MESSAGE"
+              
+              case "$LATEST_MESSAGE" in
+                "!start bot"|"!bot start")
+                  echo "🚀 ボット起動コマンドを受信"
+                  pkill -f "python.*bot.py" 2>/dev/null || true
+                  mkdir -p logs temp
+                  nohup python bot.py > logs/bot.log 2>&1 &
+                  BOT_PID=$!
+                  echo $BOT_PID > temp/bot.pid
+                  
+                  # Discordに応答
+                  curl -s -X POST -H "Authorization: Bot $DISCORD_TOKEN" \
+                    -H "Content-Type: application/json" \
+                    -d "{\"content\": \"✅ ボットを起動しました！PID: $BOT_PID\"}" \
+                    "https://discord.com/api/channels/$CHANNEL_ID/messages" || true
+                  ;;
+                  
+                "!stop bot"|"!bot stop")
+                  echo "🛑 ボット停止コマンドを受信"
+                  pkill -f "python.*bot.py" 2>/dev/null || true
+                  
+                  # Discordに応答
+                  curl -s -X POST -H "Authorization: Bot $DISCORD_TOKEN" \
+                    -H "Content-Type: application/json" \
+                    -d '{"content": "🛑 ボットを停止しました"}' \
+                    "https://discord.com/api/channels/$CHANNEL_ID/messages" || true
+                  ;;
+                  
+                "!restart bot"|"!bot restart")
+                  echo "🔄 ボット再起動コマンドを受信"
+                  pkill -f "python.*bot.py" 2>/dev/null || true
+                  mkdir -p logs temp
+                  nohup python bot.py > logs/bot.log 2>&1 &
+                  BOT_PID=$!
+                  echo $BOT_PID > temp/bot.pid
+                  
+                  # Discordに応答
+                  curl -s -X POST -H "Authorization: Bot $DISCORD_TOKEN" \
+                    -H "Content-Type: application/json" \
+                    -d "{\"content\": \"🔄 ボットを再起動しました！PID: $BOT_PID\"}" \
+                    "https://discord.com/api/channels/$CHANNEL_ID/messages" || true
+                  ;;
+                  
+                "!status bot"|"!bot status")
+                  echo "📊 ボット状態確認コマンドを受信"
+                  if [ -f temp/bot.pid ]; then
+                    BOT_PID=$(cat temp/bot.pid)
+                    if ps -p $BOT_PID > /dev/null 2>&1; then
+                      STATUS="✅ ボットは実行中です (PID: $BOT_PID)"
+                    else
+                      STATUS="❌ ボットは停止しています (PIDファイルは存在します)"
+                    fi
+                  else
+                    STATUS="❌ ボットは停止しています (PIDファイルが存在しません)"
+                  fi
+                  
+                  # Discordに応答
+                  curl -s -X POST -H "Authorization: Bot $DISCORD_TOKEN" \
+                    -H "Content-Type: application/json" \
+                    -d "{\"content\": \"$STATUS\"}" \
+                    "https://discord.com/api/channels/$CHANNEL_ID/messages" || true
+                  ;;
+                  
+                "!help"|"!bot help")
+                  echo "❓ ヘルプコマンドを受信"
+                  HELP_TEXT="🤖 **ボット操作コマンド**\n\n"
+                  HELP_TEXT+="• \`!start bot\` - ボットを起動\n"
+                  HELP_TEXT+="• \`!stop bot\` - ボットを停止\n"
+                  HELP_TEXT+="• \`!restart bot\` - ボットを再起動\n"
+                  HELP_TEXT+="• \`!status bot\` - ボットの状態を確認\n"
+                  HELP_TEXT+="• \`!help\` - ヘルプを表示"
+                  
+                  # Discordに応答
+                  curl -s -X POST -H "Authorization: Bot $DISCORD_TOKEN" \
+                    -H "Content-Type: application/json" \
+                    -d "{\"content\": \"$HELP_TEXT\"}" \
+                    "https://discord.com/api/channels/$CHANNEL_ID/messages" || true
+                  ;;
+              esac
+              
+              LAST_MESSAGE_ID="$LATEST_ID"
+            fi
+          fi
+          
+          # 30秒待機
+          sleep 30
+        done
         
-        # プロセスが実行中か確認
-        sleep 5
-        if ps -p $BOT_PID > /dev/null; then
-          echo "✅ ボットが正常に起動しました: PID=$BOT_PID"
-          # Discordに成功通知
-          curl -X POST \
-            -H "Content-Type: application/json" \
-            -d '{"content": "✅ ボットが正常に起動しました！PID: '$BOT_PID' ('$(date +%Y-%m-%d\ %H:%M:%S)')"}' \
-            "$DISCORD_WEBHOOK_URL" || true
-        else
-          echo "❌ ボットの起動に失敗しました"
-          # Discordにエラー通知
-          curl -X POST \
-            -H "Content-Type: application/json" \
-            -d '{"content": "❌ ボットの起動に失敗しました！ ('$(date +%Y-%m-%d\ %H:%M:%S)')\n```'$(cat logs/bot.log)'```"}' \
-            "$DISCORD_WEBHOOK_URL" || true
-          cat logs/bot.log
-          exit 1
-        fi
-        
-        echo "ボットが正常に起動しました"
-        echo "ℹ️ ボットはバックグラウンドで実行されています"
-        echo "ℹ️ 次回の再起動は5分後です"
+        echo "⏰ Discordコマンド監視を終了します"
     
     - name: Show logs
       if: always()  # ボットがクラッシュしても必ず実行
