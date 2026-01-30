@@ -131,29 +131,7 @@ jobs:
           fi
         fi
     
-    - name: Check if bot is running
-      id: check_bot
-      env:
-        DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
-        APPLICATION_ID: ${{ secrets.APPLICATION_ID }}
-        ALLOWED_CHANNEL_IDS: ${{ secrets.ALLOWED_CHANNEL_ID }}
-      run: |
-        # 実際のボットプロセスをチェック
-        if [ -f temp/bot.pid ]; then
-          if ps -p $(cat temp/bot.pid) > /dev/null; then
-            echo "ボットは既に実行中です"
-            echo "RUN_BOT=false" >> $GITHUB_ENV
-          else
-            echo "ボットが終了しています。再起動します"
-            echo "RUN_BOT=true" >> $GITHUB_ENV
-          fi
-        else
-          echo "ボットが実行されていません"
-          echo "RUN_BOT=true" >> $GITHUB_ENV
-        fi
-    
     - name: Run bot
-      if: env.RUN_BOT == 'true'
       env:
         DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
         APPLICATION_ID: ${{ secrets.APPLICATION_ID }}
@@ -179,7 +157,7 @@ jobs:
         
         echo "ボットが正常に起動しました"
         echo "ℹ️ ボットはバックグラウンドで実行されています"
-        echo "ℹ️ GitHub Actionsワークフローはここで終了します"
+        echo "ℹ️ 次回の再起動は5分後です"
     
     - name: Show logs
       if: always()  # ボットがクラッシュしても必ず実行
