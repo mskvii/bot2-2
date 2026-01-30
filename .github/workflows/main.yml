@@ -177,21 +177,8 @@ jobs:
         fi
         
         echo "ボットが正常に起動しました"
-        
-        # 無限ループで待機
-        while true; do
-          # ボットがまだ実行中か確認
-          if ! ps -p $(cat temp/bot.pid) > /dev/null; then
-            echo "ボットが終了しました。再起動します..."
-            # 再起動
-            export DATA_DIR="data"
-            nohup python bot.py > logs/bot.log 2>&1 &
-            echo $! > temp/bot.pid
-            sleep 10
-          fi
-          # 10秒ごとにチェック（超高速対応）
-          sleep 10
-        done
+        echo "ℹ️ ボットはバックグラウンドで実行されています"
+        echo "ℹ️ GitHub Actionsワークフローはここで終了します"
     
     - name: Show logs
       if: always()  # ボットがクラッシュしても必ず実行
