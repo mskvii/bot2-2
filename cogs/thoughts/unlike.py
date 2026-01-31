@@ -45,7 +45,7 @@ class UnlikeModal(ui.Modal, title="🚫 いいねを削除"):
             user_id = str(interaction.user.id)
             
             # 投稿の存在確認
-            post = self.post_manager.get_post(post_id)
+            post = self.post_manager.get_post(post_id, str(interaction.user.id))
             if not post:
                 await interaction.followup.send(
                     "❌ **投稿が見つかりません**\n\n"

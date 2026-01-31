@@ -106,7 +106,14 @@ class PostManager:
         max_id = 0
         for filename in all_posts:
             try:
-                post_id = int(filename.replace('.json', ''))
+                # post_public_1.json や post_private_1.json からIDを抽出
+                if filename.startswith('public_post_'):
+                    post_id = int(filename.replace('public_post_', '').replace('.json', ''))
+                elif filename.startswith('private_post_'):
+                    post_id = int(filename.replace('private_post_', '').replace('.json', ''))
+                else:
+                    # 旧形式のファイル名対応
+                    post_id = int(filename.replace('.json', ''))
                 max_id = max(max_id, post_id)
             except ValueError:
                 continue
@@ -142,9 +149,9 @@ class PostManager:
         
         # 公開・非公開でディレクトリを分けて保存
         if is_private:
-            filename = os.path.join(self.private_posts_dir, f"{post_id}.json")
+            filename = os.path.join(self.private_posts_dir, f"private_post_{post_id}.json")
         else:
-            filename = os.path.join(self.public_posts_dir, f"{post_id}.json")
+            filename = os.path.join(self.public_posts_dir, f"public_post_{post_id}.json")
         
         with open(filename, 'w', encoding='utf-8') as f:
             json.dump(post_data, f, ensure_ascii=False, indent=2)
@@ -157,28 +164,36 @@ class PostManager:
     def get_post(self, post_id: int, user_id: str = None) -> Optional[Dict[str, Any]]:
         """投稿を取得"""
         # 公開・非公開両方のディレクトリをチェック
+        # 新形式のファイル名を試す
+        filenames_to_try = [
+            f"public_post_{post_id}.json",
+            f"private_post_{post_id}.json",
+            f"{post_id}.json"  # 旧形式対応
+        ]
+        
         for directory in [self.public_posts_dir, self.private_posts_dir]:
-            filename = os.path.join(directory, f"{post_id}.json")
-            
-            if os.path.exists(filename):
-                try:
-                    with open(filename, 'r', encoding='utf-8') as f:
-                        post_data = json.load(f)
-                    
-                    # 非公開投稿のアクセス制御
-                    if post_data.get('is_private'):
-                        if not user_id or post_data.get('user_id') != user_id:
-                            return None
+            for filename in filenames_to_try:
+                filepath = os.path.join(directory, filename)
+                
+                if os.path.exists(filepath):
+                    try:
+                        with open(filepath, 'r', encoding='utf-8') as f:
+                            post_data = json.load(f)
                         
-                        # 非公開投稿は復号
-                        post_data['content'] = self._decrypt_content(post_data['content'])
-                    
-                    # アクセスログを記録
-                    self._log_access(user_id or "anonymous", post_id, "read", post_data.get('is_private', False))
-                    
-                    return post_data
-                except (json.JSONDecodeError, FileNotFoundError):
-                    continue
+                        # 非公開投稿のアクセス制御
+                        if post_data.get('is_private'):
+                            if not user_id or post_data.get('user_id') != user_id:
+                                return None
+                            
+                            # 非公開投稿は復号
+                            post_data['content'] = self._decrypt_content(post_data['content'])
+                        
+                        # アクセスログを記録
+                        self._log_access(user_id or "anonymous", post_id, "read", post_data.get('is_private', False))
+                        
+                        return post_data
+                    except (json.JSONDecodeError, FileNotFoundError):
+                        continue
         
         return None
     
@@ -194,7 +209,15 @@ class PostManager:
             for filename in sorted(os.listdir(directory)):
                 if filename.endswith('.json'):
                     try:
-                        post_id = int(filename.replace('.json', ''))
+                        # public_post_1.json や private_post_1.json からIDを抽出
+                        if filename.startswith('public_post_'):
+                            post_id = int(filename.replace('public_post_', '').replace('.json', ''))
+                        elif filename.startswith('private_post_'):
+                            post_id = int(filename.replace('private_post_', '').replace('.json', ''))
+                        else:
+                            # 旧形式のファイル名対応
+                            post_id = int(filename.replace('.json', ''))
+                        
                         post = self.get_post(post_id, user_id)
                         if post:
                             posts.append(post)
@@ -207,70 +230,86 @@ class PostManager:
                    image_url: str = None, user_id: str = None) -> bool:
         """投稿を更新"""
         # 公開・非公開両方のディレクトリをチェック
+        # 新形式のファイル名を試す
+        filenames_to_try = [
+            f"public_post_{post_id}.json",
+            f"private_post_{post_id}.json",
+            f"{post_id}.json"  # 旧形式対応
+        ]
+        
         for directory in [self.public_posts_dir, self.private_posts_dir]:
-            filename = os.path.join(directory, f"{post_id}.json")
-            
-            if os.path.exists(filename):
-                try:
-                    with open(filename, 'r', encoding='utf-8') as f:
-                        post_data = json.load(f)
-                    
-                    # 非公開投稿のアクセス制御
-                    if post_data.get('is_private'):
-                        if not user_id or post_data.get('user_id') != user_id:
-                            return False
-                    
-                    if content is not None:
+            for filename in filenames_to_try:
+                filepath = os.path.join(directory, filename)
+                
+                if os.path.exists(filepath):
+                    try:
+                        with open(filepath, 'r', encoding='utf-8') as f:
+                            post_data = json.load(f)
+                        
+                        # 非公開投稿のアクセス制御
                         if post_data.get('is_private'):
-                            post_data['content'] = self._encrypt_content(content)
-                        else:
-                            post_data['content'] = content
-                    
-                    if category is not None:
-                        post_data['category'] = category
-                    
-                    if image_url is not None:
-                        post_data['image_url'] = image_url
-                    
-                    post_data['updated_at'] = datetime.now().isoformat()
-                    
-                    with open(filename, 'w', encoding='utf-8') as f:
-                        json.dump(post_data, f, ensure_ascii=False, indent=2)
-                    
-                    # アクセスログを記録
-                    self._log_access(user_id or "anonymous", post_id, "update", post_data.get('is_private', False))
-                    
-                    return True
-                except (json.JSONDecodeError, FileNotFoundError):
-                    continue
+                            if not user_id or post_data.get('user_id') != user_id:
+                                return False
+                        
+                        if content is not None:
+                            if post_data.get('is_private'):
+                                post_data['content'] = self._encrypt_content(content)
+                            else:
+                                post_data['content'] = content
+                        
+                        if category is not None:
+                            post_data['category'] = category
+                        
+                        if image_url is not None:
+                            post_data['image_url'] = image_url
+                        
+                        post_data['updated_at'] = datetime.now().isoformat()
+                        
+                        with open(filepath, 'w', encoding='utf-8') as f:
+                            json.dump(post_data, f, ensure_ascii=False, indent=2)
+                        
+                        # アクセスログを記録
+                        self._log_access(user_id or "anonymous", post_id, "update", post_data.get('is_private', False))
+                        
+                        return True
+                    except (json.JSONDecodeError, FileNotFoundError):
+                        continue
         
         return False
     
     def delete_post(self, post_id: int, user_id: str = None) -> bool:
         """投稿を削除"""
         # 公開・非公開両方のディレクトリをチェック
+        # 新形式のファイル名を試す
+        filenames_to_try = [
+            f"public_post_{post_id}.json",
+            f"private_post_{post_id}.json",
+            f"{post_id}.json"  # 旧形式対応
+        ]
+        
         for directory in [self.public_posts_dir, self.private_posts_dir]:
-            filename = os.path.join(directory, f"{post_id}.json")
-            
-            if os.path.exists(filename):
-                try:
-                    # アクセス制御チェック
-                    with open(filename, 'r', encoding='utf-8') as f:
-                        post_data = json.load(f)
-                    
-                    if post_data.get('is_private'):
-                        if not user_id or post_data.get('user_id') != user_id:
-                            return False
-                    
-                    # 削除実行
-                    os.remove(filename)
-                    
-                    # アクセスログを記録
-                    self._log_access(user_id or "anonymous", post_id, "delete", post_data.get('is_private', False))
-                    
-                    return True
-                except (json.JSONDecodeError, FileNotFoundError):
-                    continue
+            for filename in filenames_to_try:
+                filepath = os.path.join(directory, filename)
+                
+                if os.path.exists(filepath):
+                    try:
+                        # アクセス制御チェック
+                        with open(filepath, 'r', encoding='utf-8') as f:
+                            post_data = json.load(f)
+                        
+                        if post_data.get('is_private'):
+                            if not user_id or post_data.get('user_id') != user_id:
+                                return False
+                        
+                        # 削除実行
+                        os.remove(filepath)
+                        
+                        # アクセスログを記録
+                        self._log_access(user_id or "anonymous", post_id, "delete", post_data.get('is_private', False))
+                        
+                        return True
+                    except (json.JSONDecodeError, FileNotFoundError):
+                        continue
         
         return False
     

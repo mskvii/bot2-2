@@ -176,7 +176,8 @@ class PostEditModal(ui.Modal, title="投稿を編集"):
                 post_id=self.post_data['id'],
                 content=new_content,
                 category=new_category,
-                image_url=new_image_url
+                image_url=new_image_url,
+                user_id=str(interaction.user.id)
             )
             
             if not success:

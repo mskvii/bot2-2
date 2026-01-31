@@ -153,7 +153,7 @@ class DeleteConfirmModal(ui.Modal, title="🗑️ 投稿削除確認"):
             post_id = self.post_data['id']
             
             # 投稿ファイルを削除
-            success = self.cog.post_manager.delete_post(post_id)
+            success = self.cog.post_manager.delete_post(post_id, str(interaction.user.id))
             if not success:
                 logger.error(f"投稿の削除に失敗しました: 投稿ID={post_id}")
                 await interaction.followup.send(

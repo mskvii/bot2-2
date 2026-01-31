@@ -55,7 +55,7 @@ class ReplyModal(ui.Modal, title="💬 リプライする投稿"):
             reply_content = self.reply_input.value.strip()
             
             # 親投稿の存在確認
-            parent_post = self.post_manager.get_post(post_id)
+            parent_post = self.post_manager.get_post(post_id, str(interaction.user.id))
             
             if not parent_post:
                 await interaction.followup.send(

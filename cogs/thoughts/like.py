@@ -45,7 +45,7 @@ class LikeModal(ui.Modal, title="❤️ いいねする投稿"):
             post_id = int(self.post_id_input.value.strip())
             
             # 投稿情報を取得
-            post = self.post_manager.get_post(post_id)
+            post = self.post_manager.get_post(post_id, str(interaction.user.id))
             
             if not post:
                 await interaction.followup.send(

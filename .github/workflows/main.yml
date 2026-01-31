@@ -41,8 +41,8 @@ jobs:
     
     - name: Setup data directory
       run: |
-        mkdir -p logs temp data/posts data/replies data/likes data/actions data/message_refs
-        chmod 755 logs temp data data/posts data/replies data/likes data/actions data/message_refs
+        mkdir -p logs temp data/posts/public data/posts/private data/replies data/likes data/actions data/message_refs data/logs/access
+        chmod 755 logs temp data data/posts data/posts/public data/posts/private data/replies data/likes data/actions data/message_refs data/logs/access
     
     - name: Preserve existing data
       run: |
@@ -55,6 +55,8 @@ jobs:
           echo "📊 データ情報:"
           find data -name "*.json" | wc -l
           echo "投稿数: $(find data/posts -name "*.json" | wc -l)"
+          echo "  公開投稿数: $(find data/posts/public -name "*.json" | wc -l)"
+          echo "  非公開投稿数: $(find data/posts/private -name "*.json" | wc -l)"
           echo "リプライ数: $(find data/replies -name "*.json" | wc -l)"
           echo "いいね数: $(find data/likes -name "*.json" | wc -l)"
           echo "アクション数: $(find data/actions -name "*.json" | wc -l)"
@@ -70,7 +72,7 @@ jobs:
           else
             echo "⚠️ GitHubにもdataディレクトリがありません"
             echo "📝 新規に空のデータディレクトリを作成します"
-            mkdir -p data/posts data/replies data/likes data/actions data/message_refs
+            mkdir -p data/posts/public data/posts/private data/replies data/likes data/actions data/message_refs data/logs/access
           fi
         fi
     
@@ -109,7 +111,7 @@ jobs:
             else
               echo "⚠️ GitHubにもデータディレクトリがありません"
               echo "📝 新規に空のデータディレクトリを作成します"
-              mkdir -p data/posts data/replies data/likes data/actions data/message_refs
+              mkdir -p data/posts/public data/posts/private data/replies data/likes data/actions data/message_refs data/logs/access
             fi
           fi
           
@@ -221,6 +223,8 @@ jobs:
           echo "=== データ情報 ==="
           echo "📁 データディレクトリサイズ: $(du -sh data | cut -f1)"
           echo "📊 投稿数: $(find data/posts -name "*.json" | wc -l)"
+          echo "  公開投稿数: $(find data/posts/public -name "*.json" | wc -l)"
+          echo "  非公開投稿数: $(find data/posts/private -name "*.json" | wc -l)"
           echo "📊 リプライ数: $(find data/replies -name "*.json" | wc -l)"
           echo "📊 いいね数: $(find data/likes -name "*.json" | wc -l)"
           echo "📊 アクション数: $(find data/actions -name "*.json" | wc -l)"

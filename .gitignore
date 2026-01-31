@@ -140,3 +140,6 @@ Thumbs.db
 # File-based data management
 # data/ - Commented out to allow GitHub sync
 # !data/.gitkeep
+# Encryption key and access logs should be tracked
+!data/.encryption_key
+!data/logs/access/

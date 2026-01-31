@@ -42,9 +42,17 @@ async def sync_to_github(action_description: str, user_name: str = None, post_id
         else:
             commit_message = f"🔄 {action_description.capitalize()} - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
         
-        # git add
-        subprocess.run(['git', 'add', 'data/'], 
-                     capture_output=True, text=True, check=True)
+        # publicとprivateの両方を追加
+        subprocess.run(['git', 'add', 'data/posts/public/'], 
+                     capture_output=True, text=True, check=False)
+        subprocess.run(['git', 'add', 'data/posts/private/'], 
+                     capture_output=True, text=True, check=False)
+        subprocess.run(['git', 'add', 'data/logs/access/'], 
+                     capture_output=True, text=True, check=False)
+        subprocess.run(['git', 'add', 'data/.encryption_key'], 
+                     capture_output=True, text=True, check=False)
+        subprocess.run(['git', 'add', 'data/.last_sync'], 
+                     capture_output=True, text=True, check=False)
         
         # 必ずコミット（変更チェックなし）
         max_retries = 3  # 3回に減らして整理

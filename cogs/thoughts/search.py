@@ -637,7 +637,7 @@ class PaginationView(ui.View):
             await interaction.response.defer(ephemeral=True)
             
             # 投稿情報を取得
-            post = self.search_cog.post_manager.get_post(post_id)
+            post = self.search_cog.post_manager.get_post(post_id, str(interaction.user.id))
             
             if not post:
                 await interaction.followup.send(
