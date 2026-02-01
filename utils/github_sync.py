@@ -42,16 +42,28 @@ async def sync_to_github(action_description: str, user_name: str = None, post_id
         else:
             commit_message = f"🔄 {action_description.capitalize()} - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
         
-        # publicとprivateの両方を追加
+        # 全データディレクトリを網羅的に追加
         subprocess.run(['git', 'add', 'data/posts/public/'], 
                      capture_output=True, text=True, check=False)
         subprocess.run(['git', 'add', 'data/posts/private/'], 
+                     capture_output=True, text=True, check=False)
+        subprocess.run(['git', 'add', 'data/posts/private/.gitkeep'], 
+                     capture_output=True, text=True, check=False)
+        subprocess.run(['git', 'add', 'data/replies/'], 
+                     capture_output=True, text=True, check=False)
+        subprocess.run(['git', 'add', 'data/likes/'], 
+                     capture_output=True, text=True, check=False)
+        subprocess.run(['git', 'add', 'data/actions/'], 
+                     capture_output=True, text=True, check=False)
+        subprocess.run(['git', 'add', 'data/message_refs/'], 
                      capture_output=True, text=True, check=False)
         subprocess.run(['git', 'add', 'data/logs/access/'], 
                      capture_output=True, text=True, check=False)
         subprocess.run(['git', 'add', 'data/.encryption_key'], 
                      capture_output=True, text=True, check=False)
         subprocess.run(['git', 'add', 'data/.last_sync'], 
+                     capture_output=True, text=True, check=False)
+        subprocess.run(['git', 'add', 'data/.gitkeep'], 
                      capture_output=True, text=True, check=False)
         
         # 必ずコミット（変更チェックなし）
