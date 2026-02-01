@@ -140,11 +140,12 @@ class Post(commands.Cog):
                     if image_url:
                         embed.set_image(url=image_url)
 
-                    # footerはpost_id取得後に設定
+                    # footerを設定（post_idは編集を避けるため含めない）
                     footer_parts = []
                     if category:
                         footer_parts.append(f"カテゴリー: {category}")
-                    # 投稿IDは保存後に設定
+                    if footer_parts:
+                        embed.set_footer(text=" | ".join(footer_parts))
                     
                     # メッセージを送信
                     sent_message = await channel.send(embed=embed)
