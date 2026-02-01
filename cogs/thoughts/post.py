@@ -194,11 +194,11 @@ class Post(commands.Cog):
                     )
                     return
                 
-                # post_id取得後にembedのfooterを更新
+                # post_id取得後にembedのfooterを更新（編集を避ける）
                 if is_public and sent_message:
-                    footer_parts.append(f"投稿ID: {post_id}")
-                    embed.set_footer(text=" | ".join(footer_parts))
-                    await sent_message.edit(embed=embed)
+                    # 編集を避けるため、ここではembedを更新しない
+                    # ユーザーには完了メッセージでpost_idを通知する
+                    logger.info(f"投稿ID {post_id} を埋め込み込みましたが、編集表示を避けるためembedは更新しません")
                 
                 # 非公開投稿の場合はスレッド処理を続行
                 if not is_public:
