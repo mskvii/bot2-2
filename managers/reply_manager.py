@@ -123,24 +123,6 @@ class ReplyManager:
         except (json.JSONDecodeError, FileNotFoundError):
             return False
     
-    def delete_replies_by_post_id(self, post_id: int) -> int:
-        """投稿IDから全リプライを削除"""
-        deleted_count = 0
-        
-        for filename in os.listdir(self.replies_dir):
-            if filename.startswith('reply_') and filename.endswith('.json'):
-                try:
-                    with open(os.path.join(self.replies_dir, filename), 'r', encoding='utf-8') as f:
-                        reply_data = json.load(f)
-                        
-                        if reply_data.get('post_id') == post_id:
-                            os.remove(os.path.join(self.replies_dir, filename))
-                            deleted_count += 1
-                except (json.JSONDecodeError, FileNotFoundError):
-                    continue
-        
-        return deleted_count
-    
     def update_reply_message_id(self, reply_id: int, message_id: str, channel_id: str, forwarded_message_id: str = None) -> None:
         """リプライファイルにメッセージIDを更新"""
         filename = os.path.join(self.replies_dir, f"reply_{reply_id}.json")

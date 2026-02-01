@@ -12,7 +12,6 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from managers.post_manager import PostManager
 from managers.message_ref_manager import MessageRefManager
-from managers.reply_manager import ReplyManager
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +22,6 @@ class Delete(commands.Cog):
         self.bot = bot
         self.post_manager = PostManager()
         self.message_ref_manager = MessageRefManager()
-        self.reply_manager = ReplyManager()
     
     @app_commands.command(name="delete", description="🗑️ 投稿を削除")
     async def delete_post(self, interaction: Interaction) -> None:
@@ -213,22 +211,6 @@ class DeleteConfirmModal(ui.Modal, title="🗑️ 投稿削除確認"):
             
             # メッセージ参照を削除
             self.cog.message_ref_manager.delete_message_ref(post_id)
-            
-            # 関連するリプライを削除
-            # TODO: ReplyManagerのdelete_replies_by_post_idメソッドを追加
-            # deleted_replies = self.cog.reply_manager.delete_replies_by_post_id(post_id)
-            deleted_replies = 0  # 仮実装
-            logger.info(f"リプライを削除しました: {deleted_replies}件")
-            
-            # 関連するいいねを削除
-            likes_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 
-                                    'data', 'likes')
-            if os.path.exists(likes_dir):
-                for filename in os.listdir(likes_dir):
-                    if filename.startswith(f'{post_id}_') and filename.endswith('.json'):
-                        like_file = os.path.join(likes_dir, filename)
-                        os.remove(like_file)
-                        logger.info(f"いいねを削除しました: {filename}")
             
             # GitHubに保存する処理
             from .github_sync import sync_to_github
