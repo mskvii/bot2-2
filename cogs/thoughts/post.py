@@ -81,7 +81,7 @@ class Post(commands.Cog):
             self.add_item(self.anonymous)
 
         async def on_submit(self, interaction: Interaction) -> None:
-            """投稿内容をデータベースに保存"""
+            """投稿内容をファイルに保存"""
             try:
                 await interaction.response.defer(ephemeral=True)
             except discord.InteractionResponded:
@@ -112,7 +112,7 @@ class Post(commands.Cog):
                 else:
                     is_anonymous = False  # デフォルトは表示
                 
-                # データベースに保存
+                # ファイルに保存
                 try:
                     # 最初のPost cogを取得
                     post_cog = self.cog if hasattr(self, 'cog') else None
@@ -139,7 +139,7 @@ class Post(commands.Cog):
                         channel_id=str(sent_message.channel.id)
                     )
                 except Exception as e:
-                    logger.error(f"データベース保存中にエラー: {e}", exc_info=True)
+                    logger.error(f"ファイル保存中にエラー: {e}", exc_info=True)
                     await interaction.followup.send(
                         f"❌ 投稿の保存中にエラーが発生しました: {str(e)}",
                         ephemeral=True
