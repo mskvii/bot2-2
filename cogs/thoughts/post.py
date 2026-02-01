@@ -26,24 +26,6 @@ class Post(commands.Cog):
         self.message_ref_manager = MessageRefManager()
         logger.info("Post cog が初期化されました")
 
-    class VisibilitySelect(ui.Select):
-        def __init__(self):
-            options = [
-                discord.SelectOption(label='公開', value='public', description='誰でも見ることができます', emoji='👥'),
-                discord.SelectOption(label='非公開', value='private', description='自分と管理者のみが削除できます', emoji='🔒')
-            ]
-            super().__init__(
-                placeholder='公開設定を選択...',
-                min_values=1,
-                max_values=1,
-                options=options
-            )
-            self.value = 'public'  # デフォルト値
-            
-        async def callback(self, interaction: discord.Interaction):
-            self.value = self.values[0]
-            await interaction.response.defer()
-    
     class PostModal(ui.Modal, title='新規投稿'):
         def __init__(self, cog) -> None:
             super().__init__(timeout=None)
