@@ -47,8 +47,6 @@ async def sync_to_github(action_description: str, user_name: str = None, post_id
                      capture_output=True, text=True, check=False)
         subprocess.run(['git', 'add', 'data/posts/private/'], 
                      capture_output=True, text=True, check=False)
-        subprocess.run(['git', 'add', 'data/posts/private/.gitkeep'], 
-                     capture_output=True, text=True, check=False)
         subprocess.run(['git', 'add', 'data/replies/'], 
                      capture_output=True, text=True, check=False)
         subprocess.run(['git', 'add', 'data/likes/'], 
