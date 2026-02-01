@@ -152,7 +152,9 @@ class Post(commands.Cog):
                         image_url=image_url,
                         is_anonymous=is_anonymous,
                         is_private=not is_public,
-                        display_name=interaction.user.display_name
+                        display_name=interaction.user.display_name,
+                        message_id=str(sent_message.id),
+                        channel_id=str(sent_message.channel.id)
                     )
                 except Exception as e:
                     logger.error(f"データベース保存中にエラー: {e}", exc_info=True)
