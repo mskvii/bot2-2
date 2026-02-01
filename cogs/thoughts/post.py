@@ -112,41 +112,9 @@ class Post(commands.Cog):
                 else:
                     is_anonymous = False  # デフォルトは表示
                 
-                # ファイルに保存
-                try:
-                    # 最初のPost cogを取得
-                    post_cog = self.cog if hasattr(self, 'cog') else None
-                    if not post_cog:
-                        # interaction.clientからPost cogを取得
-                        post_cog = interaction.client.get_cog('Post')
-                    
-                    if not post_cog:
-                        await interaction.followup.send(
-                            "❌ エラーが発生しました。Post cogが見つかりません。",
-                            ephemeral=True
-                        )
-                        return
-                    
-                    post_id = post_cog.post_manager.save_post(
-                        user_id=str(interaction.user.id),
-                        content=message,
-                        category=category,
-                        image_url=image_url,
-                        is_anonymous=is_anonymous,
-                        is_private=not is_public,
-                        display_name=interaction.user.display_name,
-                        message_id=str(sent_message.id),
-                        channel_id=str(sent_message.channel.id)
-                    )
-                except Exception as e:
-                    logger.error(f"ファイル保存中にエラー: {e}", exc_info=True)
-                    await interaction.followup.send(
-                        f"❌ 投稿の保存中にエラーが発生しました: {str(e)}",
-                        ephemeral=True
-                    )
-                    return
                 
                 # 公開・非公開で処理を分ける
+                sent_message = None
                 if is_public:
                     # 公開チャンネルに投稿
                     channel_url = get_channel_id('public')
@@ -191,7 +159,43 @@ class Post(commands.Cog):
                     # 非公開投稿はユーザー専用のスレッドを作成
                     thread_prefix = f"非公開投稿 - {interaction.user.id}"
                     target_thread: Optional[discord.Thread] = None
-
+                
+                # メッセージ送信後に投稿を保存
+                try:
+                    # 最初のPost cogを取得
+                    post_cog = self.cog if hasattr(self, 'cog') else None
+                    if not post_cog:
+                        # interaction.clientからPost cogを取得
+                        post_cog = interaction.client.get_cog('Post')
+                    
+                    if not post_cog:
+                        await interaction.followup.send(
+                            "❌ エラーが発生しました。Post cogが見つかりません。",
+                            ephemeral=True
+                        )
+                        return
+                    
+                    post_id = post_cog.post_manager.save_post(
+                        user_id=str(interaction.user.id),
+                        content=message,
+                        category=category,
+                        image_url=image_url,
+                        is_anonymous=is_anonymous,
+                        is_private=not is_public,
+                        display_name=interaction.user.display_name,
+                        message_id=str(sent_message.id),
+                        channel_id=str(sent_message.channel.id)
+                    )
+                except Exception as e:
+                    logger.error(f"ファイル保存中にエラー: {e}", exc_info=True)
+                    await interaction.followup.send(
+                        f"❌ 投稿の保存中にエラーが発生しました: {str(e)}",
+                        ephemeral=True
+                    )
+                    return
+                
+                # 非公開投稿の場合はスレッド処理を続行
+                if not is_public:
                     # アクティブスレッドから検索
                     for t in private_channel.threads:
                         if t.name.startswith(thread_prefix):
@@ -240,6 +244,34 @@ class Post(commands.Cog):
                             return
                     
                     await thread.add_user(interaction.user)
+                    
+                    # 非公開投稿用のembedを作成
+                    embed = discord.Embed(
+                        description=message,
+                        color=discord.Color.purple()
+                    )
+                    
+                    # 投稿者情報を設定
+                    if is_anonymous:
+                        embed.set_author(name="匿名ユーザー", icon_url=DEFAULT_AVATAR)
+                    else:
+                        embed.set_author(name=str(interaction.user), icon_url=interaction.user.display_avatar.url)
+                    
+                    # 画像URLがあれば設定
+                    if image_url:
+                        embed.set_image(url=image_url)
+
+                    footer_parts = []
+                    if category:
+                        footer_parts.append(f"カテゴリー: {category}")
+                    footer_parts.append(f"投稿ID: {post_id}")
+                    # UIDは表示しない
+                    embed.set_footer(text=" | ".join(footer_parts))
+                    
+                    sent_message = await thread.send(embed=embed)
+                    
+                    # DBにはスレッドIDを保存
+                    channel = thread
 
                     # 非公開投稿用ロールを作成
                     private_role = discord.utils.get(interaction.guild.roles, name="非公開")
