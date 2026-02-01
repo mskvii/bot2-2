@@ -22,7 +22,7 @@ async def sync_to_github(action_description: str, user_name: str = None, post_id
     """
     try:
         # dataディレクトリのパスを取得
-        data_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'data')
+        data_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data')
         
         # 強制的に変更を検知させるための処理
         # タイムスタンプファイルを作成
