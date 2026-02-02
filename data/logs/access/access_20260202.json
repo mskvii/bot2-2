@@ -1937,5 +1937,19 @@
     "post_id": 19,
     "action": "delete",
     "is_private": false
+  },
+  {
+    "timestamp": "2026-02-02T17:38:44.317783",
+    "user_id": "772268153370968117",
+    "post_id": 20,
+    "action": "read",
+    "is_private": false
+  },
+  {
+    "timestamp": "2026-02-02T17:38:44.319775",
+    "user_id": "772268153370968117",
+    "post_id": 20,
+    "action": "delete",
+    "is_private": false
   }
 ]
