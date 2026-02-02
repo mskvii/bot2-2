@@ -1209,5 +1209,12 @@
     "post_id": 19,
     "action": "update",
     "is_private": false
+  },
+  {
+    "timestamp": "2026-02-02T17:23:04.284292",
+    "user_id": "anonymous",
+    "post_id": 20,
+    "action": "read",
+    "is_private": false
   }
 ]
