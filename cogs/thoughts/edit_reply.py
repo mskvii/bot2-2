@@ -166,6 +166,47 @@ class ReplyEditModal(ui.Modal, title="💬 リプライを編集"):
             
             logger.info(f"リプライを更新しました: 投稿ID={post_id}, リプライID={reply_id}")
             
+            # Discordメッセージを同期的に更新
+            message_ref_data = self.cog.reply_manager.get_reply_message_ref(reply_id)
+            message_id = None
+            channel_id = None
+            
+            if message_ref_data:
+                message_id = message_ref_data.get('message_id')
+                channel_id = message_ref_data.get('channel_id')
+                logger.info(f"リプライmessage_ref取得成功: message_id={message_id}, channel_id={channel_id}")
+            else:
+                logger.warning(f"⚠️ リプライmessage_refが見つかりません: リプライID={reply_id}")
+            
+            if message_id and channel_id:
+                try:
+                    logger.info(f"リプライDiscordメッセージ更新開始: message_id={message_id}, channel_id={channel_id}")
+                    channel = interaction.guild.get_channel(int(channel_id))
+                    if channel:
+                        logger.info(f"チャンネル取得成功: {channel.name} (ID: {channel.id})")
+                        message = await channel.fetch_message(int(message_id))
+                        if message:
+                            logger.info(f"メッセージ取得成功: {message.id}")
+                            if message.embeds:
+                                logger.info(f"embeds取得成功: {len(message.embeds)}個")
+                                embed = message.embeds[0]
+                                # リプライembedを更新
+                                embed.description = self.content_input.value
+                                embed.set_footer(text=f"リプライID: {reply_id}")
+                                
+                                await message.edit(embed=embed)
+                                logger.info(f"✅ リプライDiscordメッセージ更新完了: リプライID={reply_id}")
+                            else:
+                                logger.warning(f"⚠️ メッセージにembedsがありません: message_id={message_id}")
+                        else:
+                            logger.warning(f"⚠️ メッセージ取得失敗: message_id={message_id}")
+                    else:
+                        logger.warning(f"⚠️ チャンネル取得失敗: channel_id={channel_id}")
+                except Exception as e:
+                    logger.error(f"❌ リプライDiscordメッセージ更新中にエラー: {e}", exc_info=True)
+            else:
+                logger.warning(f"⚠️ message_idまたはchannel_idがありません: message_id={message_id}, channel_id={channel_id}")
+            
             # GitHubに保存する処理
             from utils.github_sync import sync_to_github
             await sync_to_github("edit reply", interaction.user.name, reply_id)

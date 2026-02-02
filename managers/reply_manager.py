@@ -142,3 +142,19 @@ class ReplyManager:
             logger.info(f"リプライメッセージIDを更新しました: reply_id={reply_id}")
         except (json.JSONDecodeError, FileNotFoundError):
             logger.warning(f"リプライメッセージID更新失敗: reply_id={reply_id}")
+    
+    def get_reply_message_ref(self, reply_id: int) -> Optional[Dict[str, Any]]:
+        """リプライのmessage_refを取得"""
+        filename = os.path.join(self.replies_dir, f"reply_{reply_id}.json")
+        
+        try:
+            with open(filename, 'r', encoding='utf-8') as f:
+                reply_data = json.load(f)
+            
+            return {
+                'message_id': reply_data.get('message_id'),
+                'channel_id': reply_data.get('channel_id'),
+                'forwarded_message_id': reply_data.get('forwarded_message_id')
+            }
+        except (json.JSONDecodeError, FileNotFoundError):
+            return None
