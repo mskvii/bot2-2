@@ -47,17 +47,9 @@ class PostModal(ui.Modal, title='新規投稿'):
             max_length=500
         )
         
-        self.is_anonymous = ui.TextInput(
-            label='👤 匿名設定',
-            placeholder='匿名にする場合は「匿名」と入力',
-            required=False,
-            style=discord.TextStyle.short,
-            max_length=10
-        )
-        
-        self.display_name = ui.TextInput(
-            label='🏷️ 表示名',
-            placeholder='表示名を入力（任意）',
+        self.author_display = ui.TextInput(
+            label='👤 投稿者表示',
+            placeholder='「匿名」または「表示名: 名前」または空欄（本名）',
             required=False,
             style=discord.TextStyle.short,
             max_length=50
@@ -66,8 +58,7 @@ class PostModal(ui.Modal, title='新規投稿'):
         self.add_item(self.message)
         self.add_item(self.category)
         self.add_item(self.image_url)
-        self.add_item(self.is_anonymous)
-        self.add_item(self.display_name)
+        self.add_item(self.author_display)
     
     async def on_submit(self, interaction: Interaction) -> None:
         """フォーム送信時の処理"""
@@ -78,8 +69,22 @@ class PostModal(ui.Modal, title='新規投稿'):
             message = self.message.value.strip()
             category = self.category.value.strip() if self.category.value else None
             image_url = self.image_url.value.strip() if self.image_url.value else None
-            is_anonymous = self.is_anonymous.value.strip().lower() == '匿名'
-            display_name = self.display_name.value.strip() if self.display_name.value else None
+            
+            # 投稿者表示設定を解析
+            author_display = self.author_display.value.strip() if self.author_display.value else ""
+            is_anonymous = False
+            display_name = None
+            
+            if author_display == "匿名":
+                is_anonymous = True
+                display_name = None
+            elif author_display.startswith("表示名:"):
+                display_name = author_display[5:].strip()  # "表示名: "を除去
+                is_anonymous = False
+            else:
+                # 空欄またはその他の場合は本名
+                is_anonymous = False
+                display_name = None
             
             # 入力検証
             # 簡易的なバリデーション（MessageManagerがないため）

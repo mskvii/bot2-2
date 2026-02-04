@@ -57,6 +57,8 @@ async def create_public_post(
         # 投稿者情報を設定
         if is_anonymous:
             embed.set_author(name="匿名ユーザー", icon_url=DEFAULT_AVATAR)
+        elif display_name:
+            embed.set_author(name=display_name, icon_url=DEFAULT_AVATAR)
         else:
             embed.set_author(name=str(interaction.user), icon_url=interaction.user.display_avatar.url)
         
@@ -147,6 +149,8 @@ async def create_private_post(
         # 投稿者情報を設定
         if is_anonymous:
             embed.set_author(name="匿名ユーザー", icon_url=DEFAULT_AVATAR)
+        elif display_name:
+            embed.set_author(name=display_name, icon_url=DEFAULT_AVATAR)
         else:
             embed.set_author(name=str(interaction.user), icon_url=interaction.user.display_avatar.url)
         
