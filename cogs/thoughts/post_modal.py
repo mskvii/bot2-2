@@ -49,10 +49,10 @@ class PostModal(ui.Modal, title='新規投稿'):
         
         self.author_display = ui.TextInput(
             label='👤 投稿者表示',
-            placeholder='「匿名」または「表示名: 名前」または空欄（本名）',
+            placeholder='「匿名」または空欄（本名）',
             required=False,
             style=discord.TextStyle.short,
-            max_length=50
+            max_length=10
         )
         
         self.add_item(self.message)
@@ -72,17 +72,13 @@ class PostModal(ui.Modal, title='新規投稿'):
             
             # 投稿者表示設定を解析
             author_display = self.author_display.value.strip() if self.author_display.value else ""
-            is_anonymous = False
-            display_name = None
             
+            # シンプルな判定：匿名か本名か
             if author_display == "匿名":
                 is_anonymous = True
                 display_name = None
-            elif author_display.startswith("表示名:"):
-                display_name = author_display[5:].strip()  # "表示名: "を除去
-                is_anonymous = False
             else:
-                # 空欄またはその他の場合は本名
+                # 空欄またはその他はすべて本名
                 is_anonymous = False
                 display_name = None
             
