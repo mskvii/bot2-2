@@ -225,24 +225,6 @@ class Post(commands.Cog):
                     thread_prefix = f"非公開投稿 - {interaction.user.id}"
                     target_thread: Optional[discord.Thread] = None
                 
-                # メッセージ送信後にmessage_refを更新
-                if sent_message:
-                    self.cog.message_ref_manager.save_message_ref(post_id, str(sent_message.id), str(sent_message.channel.id), str(interaction.user.id))
-                    logger.info(f"メッセージ参照を保存しました: 投稿ID={post_id}")
-                    
-                    # 投稿データのmessage_idとchannel_idを更新
-                    try:
-                        post_cog.post_manager.update_post_message_ref(post_id, str(sent_message.id), str(sent_message.channel.id))
-                    except Exception as e:
-                        logger.warning(f"投稿のmessage_ref更新中にエラー: {e}")
-                else:
-                    logger.error(f"❌ メッセージ送信に失敗しました: 投稿ID={post_id}")
-                    await interaction.followup.send(
-                        "❌ メッセージ送信に失敗しました。もう一度お試しください。",
-                        ephemeral=True
-                    )
-                    return
-                
                 # 非公開投稿の場合はスレッド処理を続行
                 if not is_public:
                     # アクティブスレッドから検索
