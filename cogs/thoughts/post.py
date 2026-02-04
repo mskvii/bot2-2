@@ -276,7 +276,31 @@ class Post(commands.Cog):
                         logger.info(f"  - チャンネル名: {private_channel.name}")
                         logger.info(f"  - チャンネルID: {private_channel.id}")
                         logger.info(f"  - チャンネルタイプ: {private_channel.type}")
-                        logger.info(f"  - スレッド作成権限: {private_channel.permissions_for(interaction.guild.me).create_threads}")
+                        
+                        # プライベートスレッド作成の前提条件をチェック
+                        permissions = private_channel.permissions_for(interaction.guild.me)
+                        logger.info(f"  - スレッド作成権限: {permissions.create_threads}")
+                        logger.info(f"  - メッセージ送信権限: {permissions.send_messages}")
+                        logger.info(f"  - スレッド管理権限: {permissions.manage_threads}")
+                        
+                        # 権限がない場合は早期リターン
+                        if not permissions.create_threads:
+                            logger.error(f"❌ ボットにスレッド作成権限がありません")
+                            await interaction.followup.send(
+                                "❌ ボットにスレッドを作成する権限がありません。\n"
+                                "管理者にボットの権限設定を確認してください。",
+                                ephemeral=True
+                            )
+                            return
+                        
+                        if not permissions.send_messages:
+                            logger.error(f"❌ ボットにメッセージ送信権限がありません")
+                            await interaction.followup.send(
+                                "❌ ボットにメッセージを送信する権限がありません。\n"
+                                "管理者にボットの権限設定を確認してください。",
+                                ephemeral=True
+                            )
+                            return
                         
                         try:
                             thread = await private_channel.create_thread(
@@ -293,27 +317,23 @@ class Post(commands.Cog):
                             logger.error(f"  - create_threads: {permissions.create_threads}")
                             logger.error(f"  - send_messages: {permissions.send_messages}")
                             logger.error(f"  - manage_threads: {permissions.manage_threads}")
+                            logger.error(f"  - manage_channels: {permissions.manage_channels}")
                             
-                            # 代替案: 通常スレッドを試行
-                            logger.info(f"🔄 代替案: 通常スレッド作成を試行します")
-                            try:
-                                thread = await private_channel.create_thread(
-                                    name=thread_name[:100],
-                                    type=discord.ChannelType.public_thread,
-                                    reason=f"非公開投稿用スレッド作成（通常スレッド） - {interaction.user.id}"
-                                )
-                                logger.info(f"✅ 通常スレッド作成成功: {thread.name} (ID: {thread.id})")
-                                
-                                # スレッドを非公開に設定
-                                await thread.edit(locked=True, slowmode_delay=0)
-                                
-                            except Exception as fallback_error:
-                                logger.error(f"❌ 通常スレッド作成も失敗: {fallback_error}")
-                                await interaction.followup.send(
-                                    "❌ 非公開スレッドを作成する権限がありません。管理者に連絡してください。",
-                                    ephemeral=True
-                                )
-                                return
+                            # チャンネルのスレッド設定を確認
+                            logger.error(f"❌ チャンネル設定確認:")
+                            logger.error(f"  - チャンネルタイプ: {private_channel.type}")
+                            logger.error(f"  - NSFW: {private_channel.nsfw}")
+                            logger.error(f"  - 位置: {private_channel.position}")
+                            
+                            await interaction.followup.send(
+                                "❌ プライベートスレッドを作成する権限がありません。\n"
+                                "管理者に以下の権限を確認してください:\n"
+                                "• ボットに「スレッドを作成」権限\n"
+                                "• 非公開チャンネルでプライベートスレッドが有効\n"
+                                "• サーバーでプライベートスレッドが有効",
+                                ephemeral=True
+                            )
+                            return
                         except discord.HTTPException as e:
                             logger.error(f"❌ スレッド作成中にHTTPエラー: {e}", exc_info=True)
                             logger.error(f"❌ エラーステータス: {e.status if hasattr(e, 'status') else 'Unknown'}")
