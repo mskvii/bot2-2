@@ -196,38 +196,46 @@ class DeleteConfirmModal(ui.Modal, title="🗑️ 投稿削除確認"):
                         if original_channel:
                             # 元の投稿メッセージを削除
                             original_message = await original_channel.fetch_message(int(message_id))
+                            logger.info(f"🔧 メッセージを取得しました: メッセージID={message_id}")
+                            logger.info(f"🔧 チャンネルタイプ: {type(original_channel)}")
+                            logger.info(f"🔧 チャンネルID: {original_channel.id}")
+                            logger.info(f"🔧 メッセージチャンネルID: {original_message.channel.id}")
                             
                             # プライベートスレッドの場合はスレッドごと削除
-                            if hasattr(original_message, 'thread') and original_message.thread:
-                                # これはスレッド内のメッセージ
-                                thread = original_message.thread
-                                logger.info(f"🔧 プライベートスレッドを削除します: スレッドID={thread.id}")
+                            if hasattr(original_message.channel, 'type') and original_message.channel.type == discord.ChannelType.private_thread:
+                                # これはプライベートスレッド内のメッセージ
+                                thread = original_message.channel
+                                logger.info(f"🔧 プライベートスレッドを検出しました: スレッドID={thread.id}")
+                                logger.info(f"🔧 スレッド名: {thread.name}")
                                 
                                 try:
                                     # スレッドをアーカイブしてから削除
+                                    logger.info(f"🔧 スレッドをアーカイブします...")
                                     await thread.edit(archived=True, locked=True)
+                                    logger.info(f"🔧 スレッドを削除します...")
                                     await thread.delete()
                                     logger.info(f"✅ プライベートスレッドを削除しました: スレッドID={thread.id}")
                                 except discord.Forbidden:
                                     logger.error(f"❌ プライベートスレッドの削除権限がありません: スレッドID={thread.id}")
                                 except Exception as e:
                                     logger.error(f"❌ プライベートスレッド削除エラー: {e}")
-                            elif hasattr(original_message, 'parent') and original_message.parent:
-                                # これはスレッドの最初のメッセージ
-                                thread = original_message.parent
-                                logger.info(f"🔧 プライベートスレッドを削除します: スレッドID={thread.id}")
+                            elif hasattr(original_message.channel, 'type') and original_message.channel.type == discord.ChannelType.public_thread:
+                                # 公開スレッドの場合
+                                thread = original_message.channel
+                                logger.info(f"🔧 公開スレッドを検出しました: スレッドID={thread.id}")
                                 
                                 try:
-                                    # スレッドをアーカイブしてから削除
+                                    # 公開スレッドも削除
                                     await thread.edit(archived=True, locked=True)
                                     await thread.delete()
-                                    logger.info(f"✅ プライベートスレッドを削除しました: スレッドID={thread.id}")
+                                    logger.info(f"✅ 公開スレッドを削除しました: スレッドID={thread.id}")
                                 except discord.Forbidden:
-                                    logger.error(f"❌ プライベートスレッドの削除権限がありません: スレッドID={thread.id}")
+                                    logger.error(f"❌ 公開スレッドの削除権限がありません: スレッドID={thread.id}")
                                 except Exception as e:
-                                    logger.error(f"❌ プライベートスレッド削除エラー: {e}")
+                                    logger.error(f"❌ 公開スレッド削除エラー: {e}")
                             else:
                                 # 通常のメッセージの場合
+                                logger.info(f"🔧 通常メッセージを削除します: チャンネルID={original_channel.id}")
                                 await original_message.delete()
                                 logger.info(f"✅ 元の投稿メッセージを削除しました: メッセージID={message_id}")
                     except discord.NotFound:
