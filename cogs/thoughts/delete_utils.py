@@ -29,11 +29,22 @@ async def delete_discord_message(
     """Discordメッセージを削除する"""
     try:
         if message_id and channel_id:
-            # 元の投稿チャンネルを取得
-            original_channel = interaction.guild.get_channel(int(channel_id))
-            if not original_channel:
-                logger.error(f"❌ チャンネルが見つかりません: channel_id={channel_id}")
-                return False
+            try:
+                # 元の投稿チャンネルを取得（より堅牢な方法）
+                original_channel = interaction.guild.get_channel(int(channel_id))
+                if not original_channel:
+                    # get_channelが失敗した場合のフォールバック
+                    original_channel = interaction.client.get_channel(int(channel_id))
+                
+                if not original_channel:
+                    logger.error(f"❌ チャンネルが見つかりません: channel_id={channel_id}")
+                    # チャンネルが見つからなくてもデータ削除は続行
+                    logger.warning("⚠️ Discordメッセージ削除をスキップしますが、データ削除は続行します")
+                    return True  # データ削除は成功として扱う
+            except Exception as channel_error:
+                logger.error(f"❌ チャンネル取得エラー: {channel_error}")
+                logger.warning("⚠️ Discordメッセージ削除をスキップしますが、データ削除は続行します")
+                return True  # データ削除は成功として扱う
             
             logger.info(f"🔧 チャンネルを取得しました: ID={channel_id}, タイプ={type(original_channel)}")
             
