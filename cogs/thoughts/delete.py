@@ -196,8 +196,40 @@ class DeleteConfirmModal(ui.Modal, title="🗑️ 投稿削除確認"):
                         if original_channel:
                             # 元の投稿メッセージを削除
                             original_message = await original_channel.fetch_message(int(message_id))
-                            await original_message.delete()
-                            logger.info(f"✅ 元の投稿メッセージを削除しました: メッセージID={message_id}")
+                            
+                            # プライベートスレッドの場合はスレッドごと削除
+                            if hasattr(original_message, 'thread') and original_message.thread:
+                                # これはスレッド内のメッセージ
+                                thread = original_message.thread
+                                logger.info(f"🔧 プライベートスレッドを削除します: スレッドID={thread.id}")
+                                
+                                try:
+                                    # スレッドをアーカイブしてから削除
+                                    await thread.edit(archived=True, locked=True)
+                                    await thread.delete()
+                                    logger.info(f"✅ プライベートスレッドを削除しました: スレッドID={thread.id}")
+                                except discord.Forbidden:
+                                    logger.error(f"❌ プライベートスレッドの削除権限がありません: スレッドID={thread.id}")
+                                except Exception as e:
+                                    logger.error(f"❌ プライベートスレッド削除エラー: {e}")
+                            elif hasattr(original_message, 'parent') and original_message.parent:
+                                # これはスレッドの最初のメッセージ
+                                thread = original_message.parent
+                                logger.info(f"🔧 プライベートスレッドを削除します: スレッドID={thread.id}")
+                                
+                                try:
+                                    # スレッドをアーカイブしてから削除
+                                    await thread.edit(archived=True, locked=True)
+                                    await thread.delete()
+                                    logger.info(f"✅ プライベートスレッドを削除しました: スレッドID={thread.id}")
+                                except discord.Forbidden:
+                                    logger.error(f"❌ プライベートスレッドの削除権限がありません: スレッドID={thread.id}")
+                                except Exception as e:
+                                    logger.error(f"❌ プライベートスレッド削除エラー: {e}")
+                            else:
+                                # 通常のメッセージの場合
+                                await original_message.delete()
+                                logger.info(f"✅ 元の投稿メッセージを削除しました: メッセージID={message_id}")
                     except discord.NotFound:
                         logger.warning(f"⚠️ 元の投稿メッセージが見つかりません: メッセージID={message_id}")
                     except discord.Forbidden:
