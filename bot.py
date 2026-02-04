@@ -51,7 +51,7 @@ class ThoughtBot(commands.Bot):
             for filename in files:
                 if filename.endswith(".py") and not filename.startswith("__"):
                     # Cogファイルのみを読み込む（utils, modal, paginationなどは除外）
-                    if any(exclude in filename for exclude in ['utils', 'modal', 'pagination', 'embed', 'validation', 'type_view']):
+                    if any(exclude in filename for exclude in ['utils', 'modal', 'pagination', 'embed', 'validation', 'type_view', 'search_posts', 'search_replies']):
                         logger.info(f"ユーティリティファイルをスキップ: {filename}")
                         continue
                     
