@@ -299,12 +299,15 @@ class Post(commands.Cog):
                         except discord.Forbidden as e:
                             logger.error(f"❌ プライベートスレッド作成権限なし: {e}")
                             logger.error(f"❌ ボット権限確認:")
-                            permissions = private_channel.permissions_for(interaction.guild.me)
-                            logger.error(f"  - create_public_threads: {permissions.create_public_threads}")
-                            logger.error(f"  - create_private_threads: {permissions.create_private_threads}")
-                            logger.error(f"  - send_messages: {permissions.send_messages}")
-                            logger.error(f"  - manage_threads: {permissions.manage_threads}")
-                            logger.error(f"  - manage_channels: {permissions.manage_channels}")
+                            try:
+                                permissions = private_channel.permissions_for(interaction.guild.me)
+                                logger.error(f"  - create_public_threads: {permissions.create_public_threads}")
+                                logger.error(f"  - create_private_threads: {permissions.create_private_threads}")
+                                logger.error(f"  - send_messages: {permissions.send_messages}")
+                                logger.error(f"  - manage_threads: {permissions.manage_threads}")
+                                logger.error(f"  - manage_channels: {permissions.manage_channels}")
+                            except Exception as perm_error:
+                                logger.error(f"❌ 権限確認エラー: {perm_error}")
                             
                             # チャンネルのスレッド設定を確認
                             logger.error(f"❌ チャンネル設定確認:")
