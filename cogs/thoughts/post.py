@@ -185,7 +185,24 @@ class Post(commands.Cog):
                     
                     # メッセージを送信
                     sent_message = await channel.send(embed=embed)
-                else:
+                    
+                    # メッセージ送信成功後にmessage_refを更新
+                    if sent_message:
+                        self.cog.message_ref_manager.save_message_ref(post_id, str(sent_message.id), str(sent_message.channel.id), str(interaction.user.id))
+                        logger.info(f"メッセージ参照を保存しました: 投稿ID={post_id}")
+                        
+                        # 投稿データのmessage_idとchannel_idを更新
+                        try:
+                            post_cog.post_manager.update_post_message_ref(post_id, str(sent_message.id), str(sent_message.channel.id))
+                        except Exception as e:
+                            logger.warning(f"投稿のmessage_ref更新中にエラー: {e}")
+                    else:
+                        logger.error(f"❌ メッセージ送信に失敗しました: 投稿ID={post_id}")
+                        await interaction.followup.send(
+                            "❌ メッセージ送信に失敗しました。もう一度お試しください。",
+                            ephemeral=True
+                        )
+                        return
                     # 非公開チャンネルに投稿
                     private_channel_url = get_channel_id('private')
                     private_channel_id = extract_channel_id(private_channel_url)
@@ -198,14 +215,22 @@ class Post(commands.Cog):
                     target_thread: Optional[discord.Thread] = None
                 
                 # メッセージ送信後にmessage_refを更新
-                self.cog.message_ref_manager.save_message_ref(post_id, str(sent_message.id), str(sent_message.channel.id), str(interaction.user.id))
-                logger.info(f"メッセージ参照を保存しました: 投稿ID={post_id}")
-                
-                # 投稿データのmessage_idとchannel_idを更新
-                try:
-                    post_cog.post_manager.update_post_message_ref(post_id, str(sent_message.id), str(sent_message.channel.id))
-                except Exception as e:
-                    logger.warning(f"投稿のmessage_ref更新中にエラー: {e}")
+                if sent_message:
+                    self.cog.message_ref_manager.save_message_ref(post_id, str(sent_message.id), str(sent_message.channel.id), str(interaction.user.id))
+                    logger.info(f"メッセージ参照を保存しました: 投稿ID={post_id}")
+                    
+                    # 投稿データのmessage_idとchannel_idを更新
+                    try:
+                        post_cog.post_manager.update_post_message_ref(post_id, str(sent_message.id), str(sent_message.channel.id))
+                    except Exception as e:
+                        logger.warning(f"投稿のmessage_ref更新中にエラー: {e}")
+                else:
+                    logger.error(f"❌ メッセージ送信に失敗しました: 投稿ID={post_id}")
+                    await interaction.followup.send(
+                        "❌ メッセージ送信に失敗しました。もう一度お試しください。",
+                        ephemeral=True
+                    )
+                    return
                 
                 # 非公開投稿の場合はスレッド処理を続行
                 if not is_public:
@@ -331,27 +356,35 @@ class Post(commands.Cog):
                     # DBにはスレッドIDを保存
                     channel = thread
                 
-                # メッセージ参照を保存
-                self.cog.message_ref_manager.save_message_ref(post_id, str(sent_message.id), str(sent_message.channel.id), str(interaction.user.id))
-                logger.info(f"メッセージ参照を保存しました: 投稿ID={post_id}")
-                
-                # 公開投稿の場合のみ完了メッセージを送信（非公開は既に送信済み）
-                if is_public:
-                    embed = discord.Embed(
-                        title="✅ 投稿が完了しました！",
-                        description=f"[メッセージにジャンプ]({sent_message.jump_url})",
-                        color=discord.Color.green()
+                # メッセージ参照を保存（sent_messageがNoneの場合をチェック）
+                if sent_message:
+                    self.cog.message_ref_manager.save_message_ref(post_id, str(sent_message.id), str(sent_message.channel.id), str(interaction.user.id))
+                    logger.info(f"メッセージ参照を保存しました: 投稿ID={post_id}")
+                    
+                    # 公開投稿の場合のみ完了メッセージを送信（非公開は既に送信済み）
+                    if is_public:
+                        embed = discord.Embed(
+                            title="✅ 投稿が完了しました！",
+                            description=f"[メッセージにジャンプ]({sent_message.jump_url})",
+                            color=discord.Color.green()
+                        )
+                        embed.add_field(name="ID", value=f"`{post_id}`", inline=True)
+                        if category:
+                            embed.add_field(name="カテゴリ", value=f"`{category}`", inline=True)
+                        embed.add_field(name="表示名", value=f"`{'匿名' if is_anonymous else '表示'}`", inline=True)
+                        
+                        await interaction.followup.send(embed=embed, ephemeral=True)
+                        
+                        # GitHubに保存する処理
+                        from utils.github_sync import sync_to_github
+                        await sync_to_github("new post", interaction.user.name, post_id)
+                else:
+                    logger.error(f"❌ メッセージ送信に失敗しました: 投稿ID={post_id}")
+                    await interaction.followup.send(
+                        "❌ メッセージ送信に失敗しました。もう一度お試しください。",
+                        ephemeral=True
                     )
-                    embed.add_field(name="ID", value=f"`{post_id}`", inline=True)
-                    if category:
-                        embed.add_field(name="カテゴリ", value=f"`{category}`", inline=True)
-                    embed.add_field(name="表示名", value=f"`{'匿名' if is_anonymous else '表示'}`", inline=True)
-                    
-                    await interaction.followup.send(embed=embed, ephemeral=True)
-                    
-                    # GitHubに保存する処理
-                    from utils.github_sync import sync_to_github
-                    await sync_to_github("new post", interaction.user.name, post_id)
+                    return
                 
             except Exception as e:
                 logger.error(f"フォーム送信中にエラーが発生しました: {e}", exc_info=True)
