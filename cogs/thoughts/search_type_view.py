@@ -9,6 +9,9 @@ import discord
 from discord import app_commands, ui, Interaction
 from discord.ext import commands
 
+# SearchModalをインポート
+from .search_modal import SearchModal
+
 # ロガー設定
 logger = logging.getLogger(__name__)
 
@@ -59,3 +62,6 @@ class SearchTypeView(ui.View):
             modal = SearchModal(self.cog)
             modal.title = "🔍 詳細検索"
             await interaction.response.send_modal(modal)
+
+# SearchTypeViewをエクスポート
+__all__ = ['SearchTypeView']

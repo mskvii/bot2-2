@@ -181,8 +181,12 @@ class PostMessageManager:
         if not image_url:
             return True, ""  # 画像は任意
         
-        # 簡単なURL形式チェック
-        if not (image_url.startswith('http://') or image_url.startswith('https://')):
-            return False, "画像URLはhttp://またはhttps://で始まる必要があります。"
-        
+        # 無効なURLチェック
+        if not (image_url.startswith('http://') or image_url.startswith('https://')):       
+            return False, "無効なURLです。http://またはhttps://で始まる必要があります。"
+            
         return True, ""
+
+async def setup(bot: commands.Bot) -> None:
+    """Cogをセットアップする"""
+    await bot.add_cog(PostMessageManager(bot))

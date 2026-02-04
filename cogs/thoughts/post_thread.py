@@ -208,5 +208,9 @@ class PostThreadManager:
             logger.info(f"✅ 非公開ロールのメンバーをスレッドに追加しました: {len(private_role.members)}人")
             
         except Exception as e:
-            logger.error(f"❌ 非公開ロール管理中にエラー: {e}")
-            # ロール管理のエラーはスレッド作成の失敗とはしない
+            logger.error(f"プライベートスレッドのメンバー追加にエラー: {e}")
+            # ロール追加エラーはスレッド作成の失敗とはしない
+
+async def setup(bot: commands.Bot) -> None:
+    """Cogをセットアップする"""
+    await bot.add_cog(PostThread(bot))
