@@ -217,7 +217,7 @@ class Like(commands.Cog):
             if message_id and channel_id:
                 try:
                     # likesチャンネルを取得
-                    likes_channel_id = extract_channel_id("likes")
+                    likes_channel_id = extract_channel_id(get_channel_id('likes'))
                     likes_channel = interaction.guild.get_channel(likes_channel_id)
                     
                     if likes_channel:

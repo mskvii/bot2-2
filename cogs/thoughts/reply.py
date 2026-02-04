@@ -223,7 +223,7 @@ class Reply(commands.Cog):
             if message_id and channel_id:
                 try:
                     # repliesチャンネルを取得
-                    replies_channel_id = extract_channel_id("replies")
+                    replies_channel_id = extract_channel_id(get_channel_id('replies'))
                     replies_channel = interaction.guild.get_channel(replies_channel_id)
                     
                     if replies_channel:
