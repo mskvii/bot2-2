@@ -67,6 +67,23 @@ class ReplyManager:
         
         return replies
     
+    def get_replies_by_user(self, user_id: str) -> List[Dict[str, Any]]:
+        """ユーザーのリプライを取得"""
+        user_replies = []
+        
+        for filename in sorted(os.listdir(self.replies_dir)):
+            if filename.startswith('reply_') and filename.endswith('.json'):
+                try:
+                    with open(os.path.join(self.replies_dir, filename), 'r', encoding='utf-8') as f:
+                        reply_data = json.load(f)
+                    
+                    if reply_data.get('user_id') == user_id:
+                        user_replies.append(reply_data)
+                except (json.JSONDecodeError, FileNotFoundError):
+                    continue
+        
+        return user_replies
+    
     def get_replies_by_post_id(self, post_id: int) -> List[Dict[str, Any]]:
         """投稿IDから全リプライを取得"""
         return self.get_replies(post_id)

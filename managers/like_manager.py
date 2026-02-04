@@ -66,6 +66,23 @@ class LikeManager:
         
         return likes
     
+    def get_likes_by_user(self, user_id: str) -> List[Dict[str, Any]]:
+        """ユーザーのいいねを取得"""
+        user_likes = []
+        
+        for filename in sorted(os.listdir(self.likes_dir)):
+            if filename.startswith('like_') and filename.endswith('.json'):
+                try:
+                    with open(os.path.join(self.likes_dir, filename), 'r', encoding='utf-8') as f:
+                        like_data = json.load(f)
+                    
+                    if like_data.get('user_id') == user_id:
+                        user_likes.append(like_data)
+                except (json.JSONDecodeError, FileNotFoundError):
+                    continue
+        
+        return user_likes
+    
     def get_like_by_user_and_post(self, post_id: int, user_id: str) -> Optional[Dict[str, Any]]:
         """ユーザーといいねされた投稿IDからいいねデータを取得"""
         for filename in os.listdir(self.likes_dir):

@@ -172,12 +172,132 @@ class Unlike(commands.Cog):
     async def unlike_command(self, interaction: Interaction) -> None:
         """いいね削除コマンド"""
         try:
-            await interaction.response.send_modal(UnlikeModal(self.like_manager, self.post_manager))
+            await interaction.response.defer(ephemeral=True)
+            
+            # ユーザーのいいねを取得
+            user_id = str(interaction.user.id)
+            likes = self.like_manager.get_likes_by_user(user_id)
+            
+            if not likes:
+                await interaction.followup.send(
+                    "❌ **いいねが見つかりません**\n\n"
+                    "削除できるいいねがありません。",
+                    ephemeral=True
+                )
+                return
+            
+            # 投稿情報を付加
+            for like in likes:
+                post = self.post_manager.get_post(like['post_id'], user_id)
+                if post:
+                    like['post_content'] = post.get('content', '内容不明')
+                else:
+                    like['post_content'] = '投稿が見つかりません'
+            
+            # 作成日時でソート
+            likes.sort(key=lambda x: x.get('created_at', ''), reverse=True)
+            
+            # 選択ビューを表示
+            from .unlike_select import UnlikeSelectView
+            view = UnlikeSelectView(likes, self)
+            embed = discord.Embed(
+                title="❌ 削除するいいねを選択",
+                description="削除したいいいねを選択してください",
+                color=discord.Color.red()
+            )
+            
+            await interaction.followup.send(embed=embed, view=view, ephemeral=True)
+            
         except Exception as e:
-            logger.error(f"いいね削除モーダル表示中にエラーが発生しました: {e}", exc_info=True)
+            logger.error(f"いいね削除選択UI表示中にエラーが発生しました: {e}", exc_info=True)
             await interaction.followup.send(
                 "❌ **エラーが発生しました**\n\n"
-                "いいねの削除に失敗しました。",
+                "いいねの選択に失敗しました。もう一度お試しください。",
+                ephemeral=True
+            )
+    
+    async def process_unlike(self, interaction: Interaction, like_data: Dict[str, Any]) -> None:
+        """いいね削除処理を実行"""
+        try:
+            await interaction.response.defer(ephemeral=True)
+            
+            like_id = like_data['id']
+            post_id = like_data['post_id']
+            user_id = str(interaction.user.id)
+            
+            # いいねを削除
+            success = self.like_manager.delete_like(post_id, user_id)
+            
+            if not success:
+                await interaction.followup.send(
+                    "❌ **エラーが発生しました**\n\n"
+                    "いいねの削除に失敗しました。",
+                    ephemeral=True
+                )
+                return
+            
+            # Discordメッセージを確実に削除
+            message_id = like_data.get('message_id')
+            channel_id = like_data.get('channel_id')
+            forwarded_message_id = like_data.get('forwarded_message_id')
+            
+            if message_id and channel_id:
+                try:
+                    likes_channel = interaction.guild.get_channel(int(channel_id))
+                    if likes_channel:
+                        deleted_count = 0
+                        
+                        # いいねメッセージを削除
+                        try:
+                            like_message = await likes_channel.fetch_message(int(message_id))
+                            await like_message.delete()
+                            deleted_count += 1
+                            logger.info(f"✅ いいねメッセージを削除しました: メッセージID={message_id}")
+                        except discord.NotFound:
+                            logger.warning(f"⚠️ いいねメッセージが見つかりません: メッセージID={message_id}")
+                        except discord.Forbidden:
+                            logger.error(f"❌ いいねメッセージの削除権限がありません: メッセージID={message_id}")
+                        except Exception as e:
+                            logger.error(f"❌ いいねメッセージ削除エラー: {e}")
+                        
+                        # 転送メッセージも削除
+                        if forwarded_message_id:
+                            try:
+                                forwarded_message = await likes_channel.fetch_message(int(forwarded_message_id))
+                                await forwarded_message.delete()
+                                deleted_count += 1
+                                logger.info(f"✅ 転送メッセージを削除しました: メッセージID={forwarded_message_id}")
+                            except discord.NotFound:
+                                logger.warning(f"⚠️ 転送メッセージが見つかりません: メッセージID={forwarded_message_id}")
+                            except discord.Forbidden:
+                                logger.error(f"❌ 転送メッセージの削除権限がありません: メッセージID={forwarded_message_id}")
+                            except Exception as e:
+                                logger.error(f"❌ 転送メッセージ削除エラー: {e}")
+                        
+                        logger.info(f"📊 いいね削除結果: {deleted_count}個のメッセージを削除しました")
+                    else:
+                        logger.error(f"❌ likesチャンネルが見つかりません: channel_id={channel_id}")
+                except Exception as e:
+                    logger.error(f"❌ Discordメッセージ削除処理エラー: {e}")
+            
+            # 成功メッセージ
+            await interaction.followup.send(
+                f"✅ いいねを削除しました！\n\n"
+                f"いいねID: {like_id}\n"
+                f"投稿ID: {post_id}\n"
+                f"内容: {like_data.get('post_content', '')[:100]}{'...' if len(like_data.get('post_content', '')) > 100 else ''}",
+                ephemeral=True
+            )
+            
+            # GitHubに保存する処理
+            from utils.github_sync import sync_to_github
+            await sync_to_github("unlike", interaction.user.name, post_id)
+            
+        except Exception as e:
+            logger.error(f"いいね削除処理中にエラーが発生しました: {e}", exc_info=True)
+            await interaction.followup.send(
+                "❌ **エラーが発生しました**\n\n"
+                "いいねの削除中にエラーが発生しました。もう一度お試しください。",
                 ephemeral=True
             )
 
