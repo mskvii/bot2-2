@@ -271,6 +271,13 @@ class Post(commands.Cog):
                     else:
                         # 新しく作成
                         thread_name = f"{thread_prefix} ({interaction.user.name})"
+                        logger.info(f"🔧 プライベートスレッド作成開始:")
+                        logger.info(f"  - スレッド名: {thread_name}")
+                        logger.info(f"  - チャンネル名: {private_channel.name}")
+                        logger.info(f"  - チャンネルID: {private_channel.id}")
+                        logger.info(f"  - チャンネルタイプ: {private_channel.type}")
+                        logger.info(f"  - スレッド作成権限: {private_channel.permissions_for(interaction.guild.me).create_threads}")
+                        
                         try:
                             thread = await private_channel.create_thread(
                                 name=thread_name[:100],
@@ -278,16 +285,49 @@ class Post(commands.Cog):
                                 reason=f"非公開投稿用スレッド作成 - {interaction.user.id}",
                                 invitable=False
                             )
-                        except discord.Forbidden:
+                            logger.info(f"✅ プライベートスレッド作成成功: {thread.name} (ID: {thread.id})")
+                        except discord.Forbidden as e:
+                            logger.error(f"❌ プライベートスレッド作成権限なし: {e}")
+                            logger.error(f"❌ ボット権限確認:")
+                            permissions = private_channel.permissions_for(interaction.guild.me)
+                            logger.error(f"  - create_threads: {permissions.create_threads}")
+                            logger.error(f"  - send_messages: {permissions.send_messages}")
+                            logger.error(f"  - manage_threads: {permissions.manage_threads}")
+                            
+                            # 代替案: 通常スレッドを試行
+                            logger.info(f"🔄 代替案: 通常スレッド作成を試行します")
+                            try:
+                                thread = await private_channel.create_thread(
+                                    name=thread_name[:100],
+                                    type=discord.ChannelType.public_thread,
+                                    reason=f"非公開投稿用スレッド作成（通常スレッド） - {interaction.user.id}"
+                                )
+                                logger.info(f"✅ 通常スレッド作成成功: {thread.name} (ID: {thread.id})")
+                                
+                                # スレッドを非公開に設定
+                                await thread.edit(locked=True, slowmode_delay=0)
+                                
+                            except Exception as fallback_error:
+                                logger.error(f"❌ 通常スレッド作成も失敗: {fallback_error}")
+                                await interaction.followup.send(
+                                    "❌ 非公開スレッドを作成する権限がありません。管理者に連絡してください。",
+                                    ephemeral=True
+                                )
+                                return
+                        except discord.HTTPException as e:
+                            logger.error(f"❌ スレッド作成中にHTTPエラー: {e}", exc_info=True)
+                            logger.error(f"❌ エラーステータス: {e.status if hasattr(e, 'status') else 'Unknown'}")
+                            logger.error(f"❌ エラーテキスト: {e.text if hasattr(e, 'text') else 'Unknown'}")
+                            
                             await interaction.followup.send(
-                                "❌ 非公開スレッドを作成する権限がありません。管理者に連絡してください。",
+                                "❌ スレッドの作成中にエラーが発生しました。",
                                 ephemeral=True
                             )
                             return
-                        except discord.HTTPException as e:
-                            logger.error(f"スレッド作成中にエラー: {e}", exc_info=True)
+                        except Exception as e:
+                            logger.error(f"❌ 予期せぬスレッド作成エラー: {e}", exc_info=True)
                             await interaction.followup.send(
-                                "❌ スレッドの作成中にエラーが発生しました。",
+                                "❌ スレッド作成中に予期せぬエラーが発生しました。",
                                 ephemeral=True
                             )
                             return
