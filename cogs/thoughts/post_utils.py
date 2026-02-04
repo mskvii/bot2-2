@@ -197,4 +197,31 @@ async def create_private_post(
         
     except Exception as e:
         logger.error(f"非公開投稿作成中にエラー: {e}", exc_info=True)
+        
+        # ユーザーに分かりやすいエラーメッセージを送信
+        error_msg = "❌ **非公開投稿の作成に失敗しました**\n\n"
+        
+        if "見つかりません" in str(e):
+            error_msg += "原因: 非公開チャンネルが見つかりません\n"
+            error_msg += "解決策: 管理者にチャンネル設定を確認してください\n\n"
+        elif "権限" in str(e) or "Forbidden" in str(e):
+            error_msg += "原因: ボットに必要な権限がありません\n"
+            error_msg += "解決策: 管理者にボット権限の確認を依頼してください\n\n"
+        elif "スレッド" in str(e):
+            error_msg += "原因: プライベートスレッドの作成に失敗しました\n"
+            error_msg += "解決策: サーバーでプライベートスレッドが有効か確認してください\n\n"
+        else:
+            error_msg += f"原因: {str(e)}\n\n"
+        
+        error_msg += "必要な権限:\n"
+        error_msg += "• メッセージを送信\n"
+        error_msg += "• プライベートスレッドを作成\n"
+        error_msg += "• スレッドを管理\n"
+        error_msg += "• ロールを管理"
+        
+        try:
+            await interaction.followup.send(error_msg, ephemeral=True)
+        except:
+            logger.error("エラーメッセージの送信にも失敗しました")
+        
         return False
