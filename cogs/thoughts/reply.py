@@ -169,12 +169,110 @@ class Reply(commands.Cog):
     async def reply_command(self, interaction: Interaction) -> None:
         """リプライコマンド"""
         try:
-            await interaction.response.send_modal(ReplyModal(self.reply_manager, self.post_manager, self.message_ref_manager))
+            await interaction.response.defer(ephemeral=True)
+            
+            # 全ての投稿を取得
+            posts = self.post_manager.search_posts()
+            
+            if not posts:
+                await interaction.followup.send(
+                    "❌ **投稿が見つかりません**\n\n"
+                    "リプライできる投稿がありません。",
+                    ephemeral=True
+                )
+                return
+            
+            # 作成日時でソート
+            posts.sort(key=lambda x: x.get('created_at', ''), reverse=True)
+            
+            # 選択ビューを表示
+            from .reply_select import ReplySelectView
+            view = ReplySelectView(posts, self)
+            embed = discord.Embed(
+                title="💬 リプライする投稿を選択",
+                description="リプライしたい投稿を選択してください",
+                color=discord.Color.green()
+            )
+            
+            await interaction.followup.send(embed=embed, view=view, ephemeral=True)
+            
         except Exception as e:
-            logger.error(f"リプライモーダル表示中にエラーが発生しました: {e}", exc_info=True)
+            logger.error(f"リプライ選択UI表示中にエラーが発生しました: {e}", exc_info=True)
             await interaction.followup.send(
                 "❌ **エラーが発生しました**\n\n"
-                "リプライの作成に失敗しました。",
+                "リプライの選択に失敗しました。もう一度お試しください。",
+                ephemeral=True
+            )
+    
+    async def process_reply(self, interaction: Interaction, post_data: Dict[str, Any], reply_content: str) -> None:
+        """リプライ処理を実行"""
+        try:
+            await interaction.response.defer(ephemeral=True)
+            
+            post_id = post_data['id']
+            user_id = str(interaction.user.id)
+            display_name = interaction.user.display_name
+            
+            # リプライを保存
+            reply_id = self.reply_manager.save_reply(post_id, user_id, reply_content, display_name)
+            
+            # Discordメッセージ処理
+            message_id = post_data.get('message_id')
+            channel_id = post_data.get('channel_id')
+            
+            if message_id and channel_id:
+                try:
+                    # repliesチャンネルを取得
+                    replies_channel_id = extract_channel_id("replies")
+                    replies_channel = interaction.guild.get_channel(replies_channel_id)
+                    
+                    if replies_channel:
+                        # 元のチャンネルを取得
+                        original_channel = interaction.guild.get_channel(int(channel_id))
+                        if original_channel:
+                            original_message = await original_channel.fetch_message(int(message_id))
+                            
+                            # 元の投稿を転送
+                            forwarded_message = await original_message.forward(replies_channel)
+                            
+                            # リプライを投稿
+                            reply_embed = discord.Embed(
+                                title=f"💬 リプライ：{interaction.user.display_name}",
+                                description=reply_content,
+                                color=discord.Color.green()
+                            )
+                            reply_embed.set_footer(text=f"リプライID: {reply_id}")
+                            reply_message = await replies_channel.send(embed=reply_embed)
+                            
+                            # リプライファイルに両方のメッセージIDを保存
+                            self.reply_manager.update_reply_message_id(reply_id, str(reply_message.id), str(replies_channel.id), str(forwarded_message.id))
+                            logger.info(f"✅ リプライDiscordメッセージ処理完了: reply_id={reply_id}")
+                        else:
+                            logger.warning(f"元のチャンネルが見つかりません: channel_id={channel_id}")
+                    else:
+                        logger.warning(f"repliesチャンネルが見つかりません: replies_channel_id={replies_channel_id}")
+                except Exception as e:
+                    logger.error(f"リプライチャンネル転送エラー: {e}")
+            
+            # 成功メッセージ
+            await interaction.followup.send(
+                f"✅ リプライしました！\n\n"
+                f"投稿ID: {post_id}\n"
+                f"リプライID: {reply_id}\n"
+                f"投稿者: {post_data.get('display_name', '名無し')}\n"
+                f"内容: {reply_content[:100]}{'...' if len(reply_content) > 100 else ''}",
+                ephemeral=True
+            )
+            
+            # GitHubに保存する処理
+            from utils.github_sync import sync_to_github
+            await sync_to_github("reply", interaction.user.name, post_id)
+            
+        except Exception as e:
+            logger.error(f"リプライ処理中にエラーが発生しました: {e}", exc_info=True)
+            await interaction.followup.send(
+                "❌ **エラーが発生しました**\n\n"
+                "リプライの処理に失敗しました。もう一度お試しください。",
                 ephemeral=True
             )
 

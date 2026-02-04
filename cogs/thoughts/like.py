@@ -153,12 +153,113 @@ class Like(commands.Cog):
     async def like_command(self, interaction: Interaction) -> None:
         """いいねコマンド"""
         try:
-            await interaction.response.send_modal(LikeModal(self.like_manager, self.post_manager, self.message_ref_manager))
+            await interaction.response.defer(ephemeral=True)
+            
+            # 全ての投稿を取得
+            posts = self.post_manager.search_posts()
+            
+            if not posts:
+                await interaction.followup.send(
+                    "❌ **投稿が見つかりません**\n\n"
+                    "いいねできる投稿がありません。",
+                    ephemeral=True
+                )
+                return
+            
+            # 作成日時でソート
+            posts.sort(key=lambda x: x.get('created_at', ''), reverse=True)
+            
+            # 選択ビューを表示
+            from .like_select import LikeSelectView
+            view = LikeSelectView(posts, self)
+            embed = discord.Embed(
+                title="❤️ いいねする投稿を選択",
+                description="いいねしたい投稿を選択してください",
+                color=discord.Color.red()
+            )
+            
+            await interaction.followup.send(embed=embed, view=view, ephemeral=True)
+            
         except Exception as e:
-            logger.error(f"いいねモーダル表示中にエラーが発生しました: {e}", exc_info=True)
-            await interaction.response.send_message(
+            logger.error(f"いいね選択UI表示中にエラーが発生しました: {e}", exc_info=True)
+            await interaction.followup.send(
                 "❌ **エラーが発生しました**\n\n"
-                "いいねの追加に失敗しました。",
+                "いいねの選択に失敗しました。もう一度お試しください。",
+                ephemeral=True
+            )
+    
+    async def process_like(self, interaction: Interaction, post_data: Dict[str, Any]) -> None:
+        """いいね処理を実行"""
+        try:
+            await interaction.response.defer(ephemeral=True)
+            
+            post_id = post_data['id']
+            user_id = str(interaction.user.id)
+            display_name = interaction.user.display_name
+            
+            # 既にいいねしているかチェック
+            existing_like = self.like_manager.get_like_by_user_and_post(post_id, user_id)
+            if existing_like:
+                await interaction.followup.send(
+                    "❌ **既にいいねしています**\n\n"
+                    f"投稿ID: {post_id} には既にいいねしています。",
+                    ephemeral=True
+                )
+                return
+            
+            # いいねを保存
+            like_id = self.like_manager.save_like(post_id, user_id, display_name)
+            
+            # Discordメッセージ処理
+            message_id = post_data.get('message_id')
+            channel_id = post_data.get('channel_id')
+            
+            if message_id and channel_id:
+                try:
+                    # likesチャンネルを取得
+                    likes_channel_id = extract_channel_id("likes")
+                    likes_channel = interaction.guild.get_channel(likes_channel_id)
+                    
+                    if likes_channel:
+                        # 元のチャンネルを取得
+                        original_channel = interaction.guild.get_channel(int(channel_id))
+                        if original_channel:
+                            original_message = await original_channel.fetch_message(int(message_id))
+                            
+                            # 元の投稿を転送
+                            forwarded_message = await original_message.forward(likes_channel)
+                            
+                            # いいねしたことを投稿
+                            like_message = await likes_channel.send(f"❤️ いいね：{interaction.user.display_name}")
+                            
+                            # いいねファイルに両方のメッセージIDを保存
+                            self.like_manager.update_like_message_id(like_id, str(like_message.id), str(likes_channel.id), str(forwarded_message.id))
+                            logger.info(f"✅ いいねDiscordメッセージ処理完了: like_id={like_id}")
+                        else:
+                            logger.warning(f"元のチャンネルが見つかりません: channel_id={channel_id}")
+                    else:
+                        logger.warning(f"likesチャンネルが見つかりません: likes_channel_id={likes_channel_id}")
+                except Exception as e:
+                    logger.error(f"いいねチャンネル転送エラー: {e}")
+            
+            # 成功メッセージ
+            await interaction.followup.send(
+                f"✅ いいねしました！\n\n"
+                f"投稿ID: {post_id}\n"
+                f"投稿者: {post_data.get('display_name', '名無し')}\n"
+                f"内容: {post_data.get('content', '')[:100]}{'...' if len(post_data.get('content', '')) > 100 else ''}",
+                ephemeral=True
+            )
+            
+            # GitHubに保存する処理
+            from utils.github_sync import sync_to_github
+            await sync_to_github("like", interaction.user.name, post_id)
+            
+        except Exception as e:
+            logger.error(f"いいね処理中にエラーが発生しました: {e}", exc_info=True)
+            await interaction.followup.send(
+                "❌ **エラーが発生しました**\n\n"
+                "いいねの処理に失敗しました。もう一度お試しください。",
                 ephemeral=True
             )
 
