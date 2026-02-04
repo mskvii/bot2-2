@@ -221,7 +221,7 @@ class Post(commands.Cog):
                     
                     logger.info(f"✅ 非公開チャンネル取得成功: {private_channel.name} (ID: {private_channel.id})")
                     
-                    # 非公開投稿はユーザー専用のスレッドを作成
+                    # 非公開投稿用の変数を初期化
                     thread_prefix = f"非公開投稿 - {interaction.user.id}"
                     target_thread: Optional[discord.Thread] = None
                 
