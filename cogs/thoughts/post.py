@@ -381,6 +381,24 @@ class Post(commands.Cog):
                     
                     # DBにはスレッドIDを保存
                     channel = thread
+                    
+                    # 非公開投稿のmessage_refを保存
+                    if sent_message:
+                        self.cog.message_ref_manager.save_message_ref(post_id, str(sent_message.id), str(sent_message.channel.id), str(interaction.user.id))
+                        logger.info(f"メッセージ参照を保存しました: 投稿ID={post_id}")
+                        
+                        # 投稿データのmessage_idとchannel_idを更新
+                        try:
+                            post_cog.post_manager.update_post_message_ref(post_id, str(sent_message.id), str(sent_message.channel.id))
+                        except Exception as e:
+                            logger.warning(f"投稿のmessage_ref更新中にエラー: {e}")
+                    else:
+                        logger.error(f"❌ 非公開メッセージ送信に失敗しました: 投稿ID={post_id}")
+                        await interaction.followup.send(
+                            "❌ 非公開メッセージ送信に失敗しました。もう一度お試しください。",
+                            ephemeral=True
+                        )
+                        return
 
                     # 非公開投稿用ロールを作成
                     private_role = discord.utils.get(interaction.guild.roles, name="非公開")
@@ -402,29 +420,34 @@ class Post(commands.Cog):
                         except discord.HTTPException:
                             pass
                 
-                # メッセージ参照を保存（sent_messageがNoneの場合をチェック）
-                if sent_message:
+                # メッセージ参照を保存（公開投稿のみ）
+                if is_public and sent_message:
                     self.cog.message_ref_manager.save_message_ref(post_id, str(sent_message.id), str(sent_message.channel.id), str(interaction.user.id))
                     logger.info(f"メッセージ参照を保存しました: 投稿ID={post_id}")
                     
-                    # 公開投稿の場合のみ完了メッセージを送信（非公開は既に送信済み）
-                    if is_public:
-                        embed = discord.Embed(
-                            title="✅ 投稿が完了しました！",
-                            description=f"[メッセージにジャンプ]({sent_message.jump_url})",
-                            color=discord.Color.green()
-                        )
-                        embed.add_field(name="ID", value=f"`{post_id}`", inline=True)
-                        if category:
-                            embed.add_field(name="カテゴリ", value=f"`{category}`", inline=True)
-                        embed.add_field(name="表示名", value=f"`{'匿名' if is_anonymous else '表示'}`", inline=True)
-                        
-                        await interaction.followup.send(embed=embed, ephemeral=True)
-                        
-                        # GitHubに保存する処理
-                        from utils.github_sync import sync_to_github
-                        await sync_to_github("new post", interaction.user.name, post_id)
-                else:
+                    # 投稿データのmessage_idとchannel_idを更新
+                    try:
+                        post_cog.post_manager.update_post_message_ref(post_id, str(sent_message.id), str(sent_message.channel.id))
+                    except Exception as e:
+                        logger.warning(f"投稿のmessage_ref更新中にエラー: {e}")
+                    
+                    # 公開投稿の場合のみ完了メッセージを送信
+                    embed = discord.Embed(
+                        title="✅ 投稿が完了しました！",
+                        description=f"[メッセージにジャンプ]({sent_message.jump_url})",
+                        color=discord.Color.green()
+                    )
+                    embed.add_field(name="ID", value=f"`{post_id}`", inline=True)
+                    if category:
+                        embed.add_field(name="カテゴリ", value=f"`{category}`", inline=True)
+                    embed.add_field(name="表示名", value=f"`{'匿名' if is_anonymous else '表示'}`", inline=True)
+                    
+                    await interaction.followup.send(embed=embed, ephemeral=True)
+                    
+                    # GitHubに保存する処理
+                    from utils.github_sync import sync_to_github
+                    await sync_to_github("new post", interaction.user.name, post_id)
+                elif not sent_message:
                     logger.error(f"❌ メッセージ送信に失敗しました: 投稿ID={post_id}")
                     await interaction.followup.send(
                         "❌ メッセージ送信に失敗しました。もう一度お試しください。",
