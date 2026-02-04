@@ -4,7 +4,7 @@
 
 import logging
 import os
-from typing import Optional, tuple
+from typing import Optional
 from datetime import datetime
 
 # ロガー設定
