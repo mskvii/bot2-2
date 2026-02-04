@@ -24,7 +24,8 @@ from managers.action_manager import ActionManager
 from config import get_channel_id, extract_channel_id
 
 # モーダルとユーティリティをインポート
-from .search_modal import SearchModal, SearchTypeView
+from .search_modal import SearchModal
+from .search_type_view import SearchTypeView
 from .search_pagination import SearchResultsView
 from .search_utils import search_posts, search_replies, create_search_embed
 

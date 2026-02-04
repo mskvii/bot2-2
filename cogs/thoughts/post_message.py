@@ -187,6 +187,14 @@ class PostMessageManager:
             
         return True, ""
 
+class PostMessage(commands.Cog):
+    """メッセージ送信Cog"""
+    
+    def __init__(self, bot: commands.Bot) -> None:
+        self.bot = bot
+        self.message_manager = PostMessageManager(bot)
+        logger.info("PostMessage cog が初期化されました")
+
 async def setup(bot: commands.Bot) -> None:
     """Cogをセットアップする"""
-    await bot.add_cog(PostMessageManager(bot))
+    await bot.add_cog(PostMessage(bot))

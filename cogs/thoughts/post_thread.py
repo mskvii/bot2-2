@@ -211,6 +211,14 @@ class PostThreadManager:
             logger.error(f"プライベートスレッドのメンバー追加にエラー: {e}")
             # ロール追加エラーはスレッド作成の失敗とはしない
 
+class PostThread(commands.Cog):
+    """プライベートスレッドCog"""
+    
+    def __init__(self, bot: commands.Bot) -> None:
+        self.bot = bot
+        self.thread_manager = PostThreadManager(bot)
+        logger.info("PostThread cog が初期化されました")
+
 async def setup(bot: commands.Bot) -> None:
     """Cogをセットアップする"""
     await bot.add_cog(PostThread(bot))
