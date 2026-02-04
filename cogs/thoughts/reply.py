@@ -207,7 +207,7 @@ class Reply(commands.Cog):
     async def process_reply(self, interaction: Interaction, post_data: Dict[str, Any], reply_content: str) -> None:
         """リプライ処理を実行"""
         try:
-            await interaction.response.defer(ephemeral=True)
+            # interaction.response.defer()は呼ばない（セレクトメニューで既にレスポンス済み）
             
             post_id = post_data['id']
             user_id = str(interaction.user.id)
