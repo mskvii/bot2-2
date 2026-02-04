@@ -206,9 +206,20 @@ class Post(commands.Cog):
                     # 非公開チャンネルに投稿
                     private_channel_url = get_channel_id('private')
                     private_channel_id = extract_channel_id(private_channel_url)
+                    logger.info(f"非公開チャンネルURL: {private_channel_url}")
+                    logger.info(f"非公開チャンネルID: {private_channel_id}")
+                    logger.info(f"サーバーID: {interaction.guild.id if interaction.guild else 'None'}")
+                    logger.info(f"ボットID: {interaction.client.user.id if interaction.client.user else 'None'}")
+                    
                     private_channel = interaction.guild.get_channel(private_channel_id)
                     if not private_channel:
+                        logger.error(f"❌ 非公開チャンネルが見つかりません: ID={private_channel_id}")
+                        logger.error(f"❌ 利用可能なチャンネル一覧:")
+                        for channel in interaction.guild.text_channels:
+                            logger.error(f"  - {channel.name} (ID: {channel.id})")
                         raise ValueError("非公開チャンネルが見つかりません")
+                    
+                    logger.info(f"✅ 非公開チャンネル取得成功: {private_channel.name} (ID: {private_channel.id})")
                     
                     # 非公開投稿はユーザー専用のスレッドを作成
                     thread_prefix = f"非公開投稿 - {interaction.user.id}"
