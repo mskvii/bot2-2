@@ -5,6 +5,8 @@ from typing import List
 
 import discord
 from discord.ext import commands
+from discord import app_commands
+from typing import List
 
 # ロガーの設定
 logging.basicConfig(
@@ -77,6 +79,11 @@ class ThoughtBot(commands.Bot):
         try:
             synced = await self.tree.sync()
             logger.info(f"スラッシュコマンドを同期しました: {len(synced)}個")
+            
+            # 同期されたコマンドをログに出力
+            for cmd in synced:
+                logger.info(f"  - {cmd.name}: {cmd.description}")
+                
         except Exception as e:
             logger.error(f"スラッシュコマンドの同期に失敗しました: {e}")
     
@@ -106,6 +113,16 @@ class ThoughtBot(commands.Bot):
         
         logger.error(f"コマンドエラー: {error}")
         await ctx.send("コマンドの実行中にエラーが発生しました。")
+    
+    async def on_application_command_error(self, interaction, error):
+        """アプリケーションコマンドエラー時の処理"""
+        logger.error(f"アプリケーションコマンドエラー: {error}")
+        if interaction.response.is_done():
+            return
+        await interaction.response.send_message(
+            "コマンドの実行中にエラーが発生しました。",
+            ephemeral=True
+        )
     
     async def on_error(self, event_method, *args, **kwargs):
         """イベントエラー時の処理"""
