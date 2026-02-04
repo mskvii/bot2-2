@@ -73,47 +73,7 @@ class Search(commands.Cog):
                 ephemeral=True
             )
     
-    @app_commands.command(name="quick_search", description="⚡ キーワードで投稿を検索")
-    @app_commands.describe(keyword="検索キーワード")
-    async def quick_search_command(self, interaction: Interaction, keyword: str) -> None:
-        """クイック検索コマンド"""
-        try:
-            await interaction.response.defer(ephemeral=True)
-            
-            # キーワードの検証
-            if len(keyword.strip()) < 2:
-                await interaction.followup.send(
-                    "❌ **エラー**\n\n"
-                    "キーワードは2文字以上で入力してください。",
-                    ephemeral=True
-                )
-                return
-            
-            # 検索実行
-            results = search_posts(
-                keyword=keyword,
-                post_manager=self.post_manager
-            )
-            
-            if not results:
-                await interaction.followup.send(
-                    "❌ **検索結果がありません**\n\n"
-                    f"「{keyword}」に一致する投稿が見つかりませんでした。",
-                    ephemeral=True
-                )
-                return
-            
-            # 結果を表示
-            await self.show_search_results(interaction, results, "投稿")
-            
-        except Exception as e:
-            logger.error(f"quick_searchコマンド実行中にエラー: {e}", exc_info=True)
-            await interaction.followup.send(
-                "❌ **エラーが発生しました**\n\n"
-                "検索の実行に失敗しました。",
-                ephemeral=True
-            )
-    
+        
     async def show_search_results(self, interaction: Interaction, results: List[Dict[str, Any]], search_type: str) -> None:
         """検索結果を表示"""
         try:
