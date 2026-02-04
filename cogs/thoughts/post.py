@@ -152,6 +152,12 @@ class Post(commands.Cog):
                     )
                     return
                 
+                # 変数を初期化
+                channel = None
+                private_channel = None
+                thread_prefix = f"非公開投稿 - {interaction.user.id}"
+                target_thread: Optional[discord.Thread] = None
+                
                 if is_public:
                     # 公開チャンネルに投稿
                     channel_url = get_channel_id('public')
@@ -203,6 +209,7 @@ class Post(commands.Cog):
                             ephemeral=True
                         )
                         return
+                else:
                     # 非公開チャンネルに投稿
                     private_channel_url = get_channel_id('private')
                     private_channel_id = extract_channel_id(private_channel_url)
@@ -220,10 +227,6 @@ class Post(commands.Cog):
                         raise ValueError("非公開チャンネルが見つかりません")
                     
                     logger.info(f"✅ 非公開チャンネル取得成功: {private_channel.name} (ID: {private_channel.id})")
-                    
-                    # 非公開投稿用の変数を初期化
-                    thread_prefix = f"非公開投稿 - {interaction.user.id}"
-                    target_thread: Optional[discord.Thread] = None
                 
                 # 非公開投稿の場合はスレッド処理を続行
                 if not is_public:
