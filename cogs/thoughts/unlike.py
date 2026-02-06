@@ -39,7 +39,7 @@ class UnlikeModal(ui.Modal, title="🚫 いいねを削除"):
     async def on_submit(self, interaction: Interaction) -> None:
         """いいね削除実行"""
         try:
-            await interaction.response.defer(ephemeral=True)
+            # interaction.response.defer()は呼ばない（Modal送信時は既にレスポンス済み）
             
             post_id = int(self.post_id_input.value.strip())
             user_id = str(interaction.user.id)

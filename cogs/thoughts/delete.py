@@ -140,7 +140,7 @@ class DeleteConfirmModal(ui.Modal, title="🗑️ 投稿削除確認"):
     async def on_submit(self, interaction: Interaction):
         """投稿削除を実行"""
         try:
-            await interaction.response.defer(ephemeral=True)
+            # interaction.response.defer()は呼ばない（Modal送信時は既にレスポンス済み）
             
             # 削除確認
             if self.confirm_input.value.strip().lower() != "delete":

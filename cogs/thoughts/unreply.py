@@ -37,7 +37,7 @@ class UnreplyModal(ui.Modal, title="� リプライを削除"):
     async def on_submit(self, interaction: Interaction) -> None:
         """リプライ削除実行"""
         try:
-            await interaction.response.defer(ephemeral=True)
+            # interaction.response.defer()は呼ばない（Modal送信時は既にレスポンス済み）
             
             reply_id = self.reply_id_input.value.strip()
             user_id = str(interaction.user.id)

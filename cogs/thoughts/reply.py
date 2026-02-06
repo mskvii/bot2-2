@@ -49,7 +49,7 @@ class ReplyModal(ui.Modal, title="💬 リプライする投稿"):
     async def on_submit(self, interaction: Interaction) -> None:
         """リプライ実行"""
         try:
-            await interaction.response.defer(ephemeral=True)
+            # interaction.response.defer()は呼ばない（Modal送信時は既にレスポンス済み）
             
             post_id = int(self.post_id_input.value.strip())
             reply_content = self.reply_input.value.strip()

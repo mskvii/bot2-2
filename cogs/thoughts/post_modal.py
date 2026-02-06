@@ -63,7 +63,7 @@ class PostModal(ui.Modal, title='新規投稿'):
     async def on_submit(self, interaction: Interaction) -> None:
         """フォーム送信時の処理"""
         try:
-            await interaction.response.defer(ephemeral=True)
+            # interaction.response.defer()は呼ばない（Modal送信時は既にレスポンス済み）
             
             # フォームデータを取得
             message = self.message.value.strip()

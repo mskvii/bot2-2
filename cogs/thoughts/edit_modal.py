@@ -104,7 +104,7 @@ class PostEditModal(ui.Modal, title="投稿を編集"):
     async def on_submit(self, interaction: Interaction):
         """編集内容を送信"""
         try:
-            await interaction.response.defer(ephemeral=True)
+            # interaction.response.defer()は呼ばない（Modal送信時は既にレスポンス済み）
             
             # フォームデータを取得
             message = self.message.value.strip()
