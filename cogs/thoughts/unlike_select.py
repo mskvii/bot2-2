@@ -56,6 +56,15 @@ class UnlikeSelectView(ui.View):
             else:
                 await interaction.response.send_message("無効な選択です。", ephemeral=True)
                 
+        except discord.InteractionTimedOut:
+            logger.warning("いいね削除選択がタイムアウトしました")
+            await interaction.response.send_message("タイムアウトしました。もう一度お試しください。", ephemeral=True)
+        except discord.Forbidden:
+            logger.error("いいね削除選択権限がありません")
+            await interaction.response.send_message("権限がありません。", ephemeral=True)
+        except discord.NotFound:
+            logger.error("いいね削除選択でデータが見つかりません")
+            await interaction.response.send_message("データが見つかりません。", ephemeral=True)
         except Exception as e:
-            logger.error(f"いいね選択エラー: {e}")
+            logger.error(f"いいね削除選択エラー: {e}")
             await interaction.response.send_message("エラーが発生しました。もう一度お試しください。", ephemeral=True)

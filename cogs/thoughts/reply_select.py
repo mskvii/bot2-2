@@ -57,8 +57,17 @@ class ReplySelectView(ui.View):
             else:
                 await interaction.response.send_message("無効な選択です。", ephemeral=True)
                 
+        except discord.InteractionTimedOut:
+            logger.warning("リプライ選択がタイムアウトしました")
+            await interaction.response.send_message("タイムアウトしました。もう一度お試しください。", ephemeral=True)
+        except discord.Forbidden:
+            logger.error("リプライ選択権限がありません")
+            await interaction.response.send_message("権限がありません。", ephemeral=True)
+        except discord.NotFound:
+            logger.error("リプライ選択でデータが見つかりません")
+            await interaction.response.send_message("データが見つかりません。", ephemeral=True)
         except Exception as e:
-            logger.error(f"投稿選択エラー: {e}")
+            logger.error(f"リプライ選択エラー: {e}")
             await interaction.response.send_message("エラーが発生しました。もう一度お試しください。", ephemeral=True)
 
 
