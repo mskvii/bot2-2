@@ -40,7 +40,7 @@ class LikeModal(ui.Modal, title="❤️ いいねする投稿"):
     async def on_submit(self, interaction: Interaction) -> None:
         """いいね実行"""
         try:
-            # interaction.response.defer()は呼ばない（Modal送信時は既にレスポンス済み）
+            await interaction.response.defer(ephemeral=True)
             
             post_id = int(self.post_id_input.value.strip())
             

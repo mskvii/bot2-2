@@ -70,7 +70,7 @@ class SearchModal(ui.Modal, title='🔍 詳細検索'):
     async def on_submit(self, interaction: Interaction) -> None:
         """モーダル送信時の処理"""
         try:
-            # interaction.response.defer()は呼ばない（Modal送信時は既にレスポンス済み）
+            await interaction.response.defer(ephemeral=True)
             
             # フォームデータを取得
             keyword = self.keyword.value.strip() if self.keyword.value else None

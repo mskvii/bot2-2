@@ -65,21 +65,20 @@ async def sync_to_github(action_description: str, user_name: str = None, post_id
                      capture_output=True, text=True, check=False)
         
         # 必ずコミット（変更チェックなし）
-        max_retries = 1  # リトライ回数を削減してタイムアウト防止
+        max_retries = 3  # 3回に減らして整理
         for attempt in range(max_retries):
             try:
-                # git commit（タイムアウト付き）
+                # git commit
                 subprocess.run(['git', 'commit', '-m', commit_message], 
-                             capture_output=True, text=True, check=True, timeout=15)
+                             capture_output=True, text=True, check=True)
                 
                 # git push（リトライ付き）
                 for push_attempt in range(max_retries):
                     try:
-                        # git push（タイムアウト付き）
                         subprocess.run(['git', 'push', 'origin', 'main'], 
-                                     capture_output=True, text=True, check=True, timeout=20)
+                                     capture_output=True, text=True, check=True)
                         
-                        success_msg = f" GitHubに保存しました: {action_description}"
+                        success_msg = f"✅ GitHubに保存しました: {action_description}"
                         logger.info(success_msg)
                         return success_msg
                         
