@@ -180,5 +180,12 @@
     "post_id": 7,
     "action": "read",
     "is_private": false
+  },
+  {
+    "timestamp": "2026-02-12T23:58:40.951091",
+    "user_id": "1435568860878344194",
+    "post_id": 36,
+    "action": "create",
+    "is_private": false
   }
 ]
