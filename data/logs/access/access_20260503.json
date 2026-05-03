@@ -446,5 +446,19 @@
     "post_id": 57,
     "action": "delete",
     "is_private": false
+  },
+  {
+    "timestamp": "2026-05-03T11:20:18.344888",
+    "user_id": "958660558528331787",
+    "post_id": 48,
+    "action": "read",
+    "is_private": false
+  },
+  {
+    "timestamp": "2026-05-03T11:20:18.345715",
+    "user_id": "958660558528331787",
+    "post_id": 48,
+    "action": "delete",
+    "is_private": false
   }
 ]
