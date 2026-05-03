@@ -432,5 +432,19 @@
     "post_id": 58,
     "action": "delete",
     "is_private": false
+  },
+  {
+    "timestamp": "2026-05-03T11:19:49.231689",
+    "user_id": "958660558528331787",
+    "post_id": 57,
+    "action": "read",
+    "is_private": false
+  },
+  {
+    "timestamp": "2026-05-03T11:19:49.232511",
+    "user_id": "958660558528331787",
+    "post_id": 57,
+    "action": "delete",
+    "is_private": false
   }
 ]
